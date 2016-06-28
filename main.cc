@@ -34,7 +34,7 @@ double speeda = 0.0; // degrees per second
 const float c_yellow[3] = {1.0, 1.0, 0.0 };
 const float c_red[3] = {1.0, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
-const float c_gray[3] = { 0.8, 0.8, 0.8 };
+const float c_gray[3] = { 0.9, 0.9, 0.9 };
 
 // Prepare for simulation. Typically we use a time step of 1/60 of a
 // second (60Hz) and 10 iterations. This provides a high quality simulation
@@ -199,7 +199,7 @@ void DrawBody( b2Body* b, const float color[3] )
 	      }
 	    glEnd();		  
 	    
-	    glLineWidth( 5.0 );
+	    glLineWidth( 2.0 );
 	    glColor3f( color[0]/5, color[1]/5, color[2]/5 );
 	    //glColor3fv( color );
 	    //glColor3f( 0,0,0 );
@@ -225,9 +225,8 @@ void UpdateGui( GLFWwindow* window,
 		const std::vector<Robot*>& robots, 
 		const std::vector<b2Body*>& bodies ) 
 {
-  glClearColor( 0.7, 0.7, 0.7, 1.0 ); 
+  glClearColor( 0.8, 0.8, 0.8, 1.0 ); 
   glClear(GL_COLOR_BUFFER_BIT);	
-  glColor3f( 0.5,0.5,0.5);
   
   for( int i=0; i<bodies.size(); i++ )
     DrawBody( bodies[i], c_gray );
@@ -266,57 +265,57 @@ void UpdateGui( GLFWwindow* window,
 int main( int argc, char* argv[] )
 {
   srand48( time(NULL) );
-
-    GLFWwindow* window;
-
-    /* Initialize the library */
-    if (!glfwInit())
-        return -1;
-
-    /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(800, 800, "S3", NULL, NULL);
-    if (!window)
+  
+  GLFWwindow* window;
+  
+  /* Initialize the library */
+  if (!glfwInit())
+    return -1;
+  
+  /* Create a windowed mode window and its OpenGL context */
+  window = glfwCreateWindow(800, 800, "S3", NULL, NULL);
+  if (!window)
     {
-        glfwTerminate();
-        return -1;
+      glfwTerminate();
+      return -1;
     }
-    
-    b2Vec2 gravity(0.0f, 0.0f );
-    b2World world(gravity);
-    b2BodyDef groundBodyDef;
-    b2PolygonShape groundBox;
-    groundBox.SetAsBox( worldwidth/2.0, 0.01f );    
-    
-    b2Body* groundBody[4];
-    for( int i=0; i<4; i++ )
-      {
-	groundBody[i] = world.CreateBody(&groundBodyDef);	
-	groundBody[i]->CreateFixture(&groundBox, 0.0f);
-      }
-
-    groundBody[0]->SetTransform( b2Vec2( worldwidth/2,0 ), 0 );    
-    groundBody[1]->SetTransform( b2Vec2( worldwidth/2,worldheight ), 0 );    
-    groundBody[2]->SetTransform( b2Vec2( 0, worldheight/2 ), M_PI/2.0 );    
-    groundBody[3]->SetTransform( b2Vec2( worldwidth, worldheight/2 ), M_PI/2.0 );    
-    std::vector<Robot*> robots;
-    for( int i=0; i<ROBOTS; i++ )
-      robots.push_back( new Robot( world, 
-				   drand48() * worldwidth, 
-				   drand48() * worldheight, 
-				   -M_PI + drand48() * 2.0 * M_PI ));
-			
-
-    // Define another box shape for our dynamic body.
-    b2PolygonShape dynamicBox;
-    dynamicBox.SetAsBox( boxside/2.0, boxside/2.0 );
-    
-    // Define the dynamic body fixture.
-    b2FixtureDef fixtureDef;
-    fixtureDef.shape = &dynamicBox;
-    fixtureDef.density = 5;
-    fixtureDef.friction = 3.0;
-    fixtureDef.restitution = 0.1;
-    
+  
+  b2Vec2 gravity(0.0f, 0.0f );
+  b2World world(gravity);
+  b2BodyDef groundBodyDef;
+  b2PolygonShape groundBox;
+  groundBox.SetAsBox( worldwidth/2.0, 0.01f );    
+  
+  b2Body* groundBody[4];
+  for( int i=0; i<4; i++ )
+    {
+      groundBody[i] = world.CreateBody(&groundBodyDef);	
+      groundBody[i]->CreateFixture(&groundBox, 0.0f);
+    }
+  
+  groundBody[0]->SetTransform( b2Vec2( worldwidth/2,0 ), 0 );    
+  groundBody[1]->SetTransform( b2Vec2( worldwidth/2,worldheight ), 0 );    
+  groundBody[2]->SetTransform( b2Vec2( 0, worldheight/2 ), M_PI/2.0 );    
+  groundBody[3]->SetTransform( b2Vec2( worldwidth, worldheight/2 ), M_PI/2.0 );    
+  std::vector<Robot*> robots;
+  for( int i=0; i<ROBOTS; i++ )
+    robots.push_back( new Robot( world, 
+				 drand48() * worldwidth, 
+				 drand48() * worldheight, 
+				 -M_PI + drand48() * 2.0 * M_PI ));
+  
+  
+  // Define another box shape for our dynamic body.
+  b2PolygonShape dynamicBox;
+  dynamicBox.SetAsBox( boxside/2.0, boxside/2.0 );
+  
+  // Define the dynamic body fixture.
+  b2FixtureDef fixtureDef;
+  fixtureDef.shape = &dynamicBox;
+  fixtureDef.density = 5;
+  fixtureDef.friction = 3.0;
+  fixtureDef.restitution = 0.1;
+  
     std::vector<b2Body*> bodies;    
     for( int i=0; i<BODIES; i++ )
       {
@@ -332,22 +331,22 @@ int main( int argc, char* argv[] )
 	
 	body->CreateFixture(&fixtureDef);
 	
-
+	
 	bodies.push_back( body );
       }
     
     
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
-
+    
     glScalef( 2.0 / worldwidth, 2.0 / worldheight, 1.0 );
     glTranslatef( -worldwidth/2.0, -worldheight/2.0, 0 );
 
     glfwSetCursorPosCallback( window, checkmouse );
     glfwSetKeyCallback (window, key_callback);
-
+    
     int draw_interval = DRAW_SKIP;
-
+    
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
       {
