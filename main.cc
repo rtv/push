@@ -17,7 +17,7 @@ void checkmouse( GLFWwindow* win, double x, double y)
 
 const size_t ROBOTS = 16;
 const size_t BODIES = 64;
-const int DRAW_SKIP = 5;
+int DRAW_SKIP = 5;
 
 const float maxspeedx = 0.5;
 const float maxspeeda = M_PI/2.0;
@@ -36,6 +36,13 @@ const float c_red[3] = {1.0, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
 const float c_gray[3] = { 0.8, 0.8, 0.8 };
 
+// Prepare for simulation. Typically we use a time step of 1/60 of a
+// second (60Hz) and 10 iterations. This provides a high quality simulation
+// in most game scenarios.
+const float32 timeStep = 1.0 / 10.0;
+const int32 velocityIterations = 6;
+const int32 positionIterations = 2;
+
 void key_callback( GLFWwindow* window, 
 		   int key, int scancode, int action, int mods)
 {
@@ -53,6 +60,12 @@ void key_callback( GLFWwindow* window,
 	break;
       case GLFW_KEY_D:
         speeda = -maxspeeda;
+	break;
+      case GLFW_KEY_LEFT_BRACKET:
+        DRAW_SKIP  = std::max( 0, --DRAW_SKIP );
+	break;
+      case GLFW_KEY_RIGHT_BRACKET:
+        DRAW_SKIP  = ++DRAW_SKIP;
 	break;
       default:
 	break;
@@ -171,7 +184,8 @@ void DrawBody( b2Body* b, const float color[3] )
 	    
 	    const int count = poly->GetVertexCount();
 	    
-	    glColor3f( color[0]*0.8, color[1]*0.8, color[2]*0.8 );
+	    //glColor3f( color[0]*0.8, color[1]*0.8, color[2]*0.8 );
+	    glColor3fv( color );
 	    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
 	    glBegin( GL_POLYGON );	
 	    
@@ -186,8 +200,9 @@ void DrawBody( b2Body* b, const float color[3] )
 	    glEnd();		  
 	    
 	    glLineWidth( 3.0 );
-	    //glColor3f( color[0]/3, color[1]/3, color[2]/3 );
-	    glColor3fv( color );
+	    glColor3f( color[0]/5, color[1]/5, color[2]/5 );
+	    //glColor3fv( color );
+	    //glColor3f( 0,0,0 );
 	    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	    glBegin( GL_POLYGON );	
 	    
@@ -210,15 +225,12 @@ void UpdateGui( GLFWwindow* window,
 		const std::vector<Robot*>& robots, 
 		const std::vector<b2Body*>& bodies ) 
 {
-  glClearColor( 0.3, 0.3, 0.3, 1.0 ); 
+  glClearColor( 0.7, 0.7, 0.7, 1.0 ); 
   glClear(GL_COLOR_BUFFER_BIT);	
   glColor3f( 0.5,0.5,0.5);
   
-  //for( b2Body* b = world.GetBodyList(); b; b = b->GetNext() )
-  
-
   for( int i=0; i<bodies.size(); i++ )
-    DrawBody( bodies[i], c_tan );
+    DrawBody( bodies[i], c_gray );
   
   for( int i=0; i<robots.size(); i++ )
     DrawBody( robots[i]->body, c_red );
@@ -268,19 +280,13 @@ int main( int argc, char* argv[] )
         glfwTerminate();
         return -1;
     }
-       
-    // Define the gravity vector.
-    b2Vec2 gravity(0.0f, 0.0f );//-10.0f);
     
-    // Construct a world object, which will hold and simulate the rigid bodies.
+    b2Vec2 gravity(0.0f, 0.0f );
     b2World world(gravity);
-    
-    // Define the boundary body.
     b2BodyDef groundBodyDef;
     b2PolygonShape groundBox;
-    // The extents are the half-widths of the box.
     groundBox.SetAsBox( worldwidth/2.0, 0.01f );    
-
+    
     b2Body* groundBody[4];
     for( int i=0; i<4; i++ )
       {
@@ -290,52 +296,46 @@ int main( int argc, char* argv[] )
 
     groundBody[0]->SetTransform( b2Vec2( worldwidth/2,0 ), 0 );    
     groundBody[1]->SetTransform( b2Vec2( worldwidth/2,worldheight ), 0 );    
-
     groundBody[2]->SetTransform( b2Vec2( 0, worldheight/2 ), M_PI/2.0 );    
     groundBody[3]->SetTransform( b2Vec2( worldwidth, worldheight/2 ), M_PI/2.0 );    
-    std::vector<Robot*> robots( ROBOTS );
+    std::vector<Robot*> robots;
     for( int i=0; i<ROBOTS; i++ )
-      robots[i] = new Robot( world, 
-			     drand48() * worldwidth, 
-			     drand48() * worldheight, 
-			     -M_PI + drand48() * 2.0 * M_PI );
-    
+      robots.push_back( new Robot( world, 
+				   drand48() * worldwidth, 
+				   drand48() * worldheight, 
+				   -M_PI + drand48() * 2.0 * M_PI ));
+			
 
-    std::vector<b2Body*> bodies( BODIES );
+    // Define another box shape for our dynamic body.
+    b2PolygonShape dynamicBox;
+    dynamicBox.SetAsBox( boxside/2.0, boxside/2.0 );
     
+    // Define the dynamic body fixture.
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &dynamicBox;
+    fixtureDef.density = 5;
+    fixtureDef.friction = 3.0;
+    fixtureDef.restitution = 0.1;
+    
+    std::vector<b2Body*> bodies;    
     for( int i=0; i<BODIES; i++ )
       {
 	b2BodyDef bodyDef;
 	bodyDef.type = b2_dynamicBody;
 	b2Body* body = world.CreateBody(&bodyDef);
-
+	
 	body->SetLinearDamping( 10.0 );
 	body->SetAngularDamping( 10.0 );
 	body->SetTransform( b2Vec2( worldwidth * drand48(), 
 				    worldheight * drand48()),
 			    0 );	    	    
 	
-	// Define another box shape for our dynamic body.
-	b2PolygonShape dynamicBox;
-	dynamicBox.SetAsBox( boxside/2.0, boxside/2.0 );
-	
-	// Define the dynamic body fixture.
-	b2FixtureDef fixtureDef;
-	fixtureDef.shape = &dynamicBox;
-
-	fixtureDef.density = 5;
-	fixtureDef.friction = 2.0;
 	body->CreateFixture(&fixtureDef);
+	
 
-	bodies[i] = body;
+	bodies.push_back( body );
       }
     
-    // Prepare for simulation. Typically we use a time step of 1/60 of a
-    // second (60Hz) and 10 iterations. This provides a high quality simulation
-    // in most game scenarios.
-    float32 timeStep = 1.0 / 10.0;
-    int32 velocityIterations = 6;
-    int32 positionIterations = 2;
     
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
