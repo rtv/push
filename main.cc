@@ -243,14 +243,19 @@ void UpdateGui( GLFWwindow* window,
   // draw a nose on the robot
   glColor3f( 1,1,1 );
   glPointSize( 12 );
-  glBegin( GL_POINTS );
+  glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+  glBegin( GL_TRIANGLES );
   for( int i=0; i<robots.size(); i++ )
     {      
       const b2Transform& t = robots[i]->body->GetTransform();
       const float a = t.q.GetAngle();
 
-      glVertex2f( t.p.x + robotside/3.0 * cos(a),
-		  t.p.y + robotside/3.0 * sin(a) );		  
+      glVertex2f( t.p.x + robotside/2.0 * cos(a),
+		  t.p.y + robotside/2.0 * sin(a) );		  
+      glVertex2f( t.p.x + robotside/3.0 * cos(a+0.5),
+		  t.p.y + robotside/3.0 * sin(a+0.5) );		  
+      glVertex2f( t.p.x + robotside/3.0 * cos(a-0.5),
+		  t.p.y + robotside/3.0 * sin(a-0.5) );		  
     }
   glEnd();
   
