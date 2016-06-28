@@ -13,8 +13,8 @@ public:
     } control_state_t;
 
   static const float PUSH, BACKUP, TURNMAX;
-  static const float maxspeedx, maxspeeda;
-  static const float size;
+  static const float SPEEDX, SPEEDA;
+  static const float SIZE;
 
   float pushTime, backupTime, turnTime;
   control_state_t state;

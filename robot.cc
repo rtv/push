@@ -5,13 +5,13 @@
 // static members
 const float Robot::PUSH = 5.0; // seconds
 const float Robot::BACKUP = 1.0;
-const float Robot::TURNMAX = 2.0;
-const float Robot::maxspeedx = 0.5;
-const float Robot::maxspeeda = M_PI/2.0;
-const float Robot::size = 0.3;
+const float Robot::TURNMAX = 4.0;
+const float Robot::SPEEDX = 0.5;
+const float Robot::SPEEDA = M_PI/2.0;
+const float Robot::SIZE = 0.3;
 
 // constructor
-Robot::Robot( b2World& world, float x, float y, float a ) : 
+Robot::Robot( b2World& world, const float x, const float y, const float a ) : 
   pushTime( PUSH ),
   backupTime( BACKUP ),
   turnTime( drand48() * TURNMAX ),
@@ -25,7 +25,7 @@ Robot::Robot( b2World& world, float x, float y, float a ) :
   body = world.CreateBody(&bodyDef);
   
   b2PolygonShape dynamicBox;
-  dynamicBox.SetAsBox( size/2.0, size/2.0 );
+  dynamicBox.SetAsBox( SIZE/2.0, SIZE/2.0 );
   
   b2FixtureDef fixtureDef;
   fixtureDef.shape = &dynamicBox;    
@@ -48,7 +48,7 @@ void Robot::Update( float timestep )
   switch( state )
     {
     case S_PUSH: // push
-      speedx = maxspeedx;
+      speedx = SPEEDX;
 	speeda = 0;	 
 	pushTime -= timestep;
 	//std::cout << "Pushing " << pushTime << std::endl;
@@ -60,7 +60,7 @@ void Robot::Update( float timestep )
 	break;
 	
     case S_BACKUP: // backup
-      speedx = -maxspeedx;
+      speedx = -SPEEDX;
       speeda = 0;	    
       backupTime -= timestep;
       //std::cout << "Backup " << backupTime << std::endl;
@@ -73,7 +73,7 @@ void Robot::Update( float timestep )
       
     case S_TURN: // turn
       speedx = 0;
-      speeda = maxspeeda;	    
+      speeda = SPEEDA;	    
       turnTime -= timestep;
       //std::cout << "Turning " << turnTime << std::endl;
       if( turnTime <= 0 )

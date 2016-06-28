@@ -35,7 +35,7 @@ const float robotside = 0.3;
 const float c_yellow[3] = {1.0, 1.0, 0.0 };
 const float c_red[3] = {1.0, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
-const float c_gray[3] = { 0.9, 0.9, 0.9 };
+const float c_gray[3] = { 0.9, 0.9, 1.0 };
 
 // Prepare for simulation. Typically we use a time step of 1/60 of a
 // second (60Hz) and 10 iterations. This provides a high quality simulation
