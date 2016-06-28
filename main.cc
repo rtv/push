@@ -16,8 +16,8 @@ void checkmouse( GLFWwindow* win, double x, double y)
 }
 
 const size_t ROBOTS = 16;
-const size_t BODIES = 64;
-int DRAW_SKIP = 5;
+const size_t BODIES = 32;
+int DRAW_SKIP = 1;
 
 const float maxspeedx = 0.5;
 const float maxspeeda = M_PI/2.0;
@@ -62,10 +62,16 @@ void key_callback( GLFWwindow* window,
         speeda = -maxspeeda;
 	break;
       case GLFW_KEY_LEFT_BRACKET:
-        DRAW_SKIP  = std::max( 0, --DRAW_SKIP );
+	if( mods & GLFW_MOD_SHIFT )
+	  DRAW_SKIP = 0;
+	else
+	  DRAW_SKIP  = std::max( 0, --DRAW_SKIP );
 	break;
       case GLFW_KEY_RIGHT_BRACKET:
-        DRAW_SKIP  = ++DRAW_SKIP;
+	if( mods & GLFW_MOD_SHIFT )
+	  DRAW_SKIP = 100;
+	else
+	  DRAW_SKIP  = ++DRAW_SKIP;
 	break;
       default:
 	break;
@@ -339,10 +345,15 @@ int main( int argc, char* argv[] )
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
     
+    // scale the drawing to fit the whole world in the window, origin
+    // at bottom left
     glScalef( 2.0 / worldwidth, 2.0 / worldheight, 1.0 );
     glTranslatef( -worldwidth/2.0, -worldheight/2.0, 0 );
 
-    glfwSetCursorPosCallback( window, checkmouse );
+    // get mouse/pointer events
+    //glfwSetCursorPosCallback( window, checkmouse );
+
+    // get key events
     glfwSetKeyCallback (window, key_callback);
     
     int draw_interval = DRAW_SKIP;
