@@ -199,7 +199,7 @@ void DrawBody( b2Body* b, const float color[3] )
 	      }
 	    glEnd();		  
 	    
-	    glLineWidth( 3.0 );
+	    glLineWidth( 5.0 );
 	    glColor3f( color[0]/5, color[1]/5, color[2]/5 );
 	    //glColor3fv( color );
 	    //glColor3f( 0,0,0 );
