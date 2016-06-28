@@ -15,8 +15,8 @@ void checkmouse( GLFWwindow* win, double x, double y)
   mousey = -y/10.0;
 }
 
-const size_t ROBOTS = 4;
-const size_t BODIES = 32;
+const size_t ROBOTS = 16;
+const size_t BODIES = 64;
 int DRAW_SKIP = 1;
 
 const float maxspeedx = 0.5;
@@ -143,7 +143,7 @@ public:
 	if( --pushTime < 1 )
 	  {
 	    state = 1;
-	    pushTime = 20;
+	    pushTime = 40;
 	  }
 	break;
 	
