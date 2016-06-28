@@ -1,9 +1,10 @@
 #include <GLFW/glfw3.h>
 #include <Box2D/Box2D.h>
-#include <vector>
 
-//using namespace std;
+#include <vector>
 #include <iostream>
+
+#include "robot.hh"
 
 double mousex = 0;
 double mousey = 0;
@@ -15,21 +16,21 @@ void checkmouse( GLFWwindow* win, double x, double y)
   mousey = -y/10.0;
 }
 
-const size_t ROBOTS = 16;
+const float WORLDWIDTH = 6;
+const float WORLDHEIGHT = 6;
+
+const size_t ROBOTS = 10;
 const size_t BODIES = 64;
 int DRAW_SKIP = 1;
 
 const float maxspeedx = 0.5;
 const float maxspeeda = M_PI/2.0;
 
-const float worldwidth = 6;
-const float worldheight = 6;
-
 const float boxside = 0.33;
 const float robotside = 0.3;
 
-double speedx = 0.0; // meters per second
-double speeda = 0.0; // degrees per second
+//double speedx = 0.0; // meters per second
+//double speeda = 0.0; // degrees per second
 
 const float c_yellow[3] = {1.0, 1.0, 0.0 };
 const float c_red[3] = {1.0, 0.0, 0.0 };
@@ -49,18 +50,18 @@ void key_callback( GLFWwindow* window,
   if(action == GLFW_PRESS)
     switch( key )
       {
-      case GLFW_KEY_W:
-        speedx = maxspeedx;
-	break;
-      case GLFW_KEY_S:
-        speedx = -maxspeedx;
-	break;
-      case GLFW_KEY_A:
-        speeda = maxspeeda;
-	break;
-      case GLFW_KEY_D:
-        speeda = -maxspeeda;
-	break;
+      // case GLFW_KEY_W:
+      //   speedx = maxspeedx;
+      // 	break;
+      // case GLFW_KEY_S:
+      //   speedx = -maxspeedx;
+      // 	break;
+      // case GLFW_KEY_A:
+      //   speeda = maxspeeda;
+      // 	break;
+      // case GLFW_KEY_D:
+      //   speeda = -maxspeeda;
+      // 	break;
       case GLFW_KEY_LEFT_BRACKET:
 	if( mods & GLFW_MOD_SHIFT )
 	  DRAW_SKIP = 0;
@@ -77,101 +78,26 @@ void key_callback( GLFWwindow* window,
 	break;
       }
 
- if( action == GLFW_RELEASE )
-    switch( key )
-      {
-      case GLFW_KEY_W:
-        if( speedx > 0 ) speedx = 0.0;
-	break;
-      case GLFW_KEY_S:
-        if( speedx < 0 ) speedx = 0.0;
-	break;
-      case GLFW_KEY_A:
-        if( speeda > 0 ) speeda = 0.0;
-	break;
-      case GLFW_KEY_D:
-        if( speeda < 0 ) speeda = 0.0;
-	break;
-      default:
-	break;
-      }
+ // if( action == GLFW_RELEASE )
+ //    switch( key )
+ //      {
+ //      case GLFW_KEY_W:
+ //        if( speedx > 0 ) speedx = 0.0;
+ // 	break;
+ //      case GLFW_KEY_S:
+ //        if( speedx < 0 ) speedx = 0.0;
+ // 	break;
+ //      case GLFW_KEY_A:
+ //        if( speeda > 0 ) speeda = 0.0;
+ // 	break;
+ //      case GLFW_KEY_D:
+ //        if( speeda < 0 ) speeda = 0.0;
+ // 	break;
+  //      default:
+  //	break;
+  //    }
 }
 
-class Robot
-{
-public:
-
-  int pushTime, backupTime, turnTime;
-  int state;
-  float speedx, speeda;
-  b2Body* body;
-  
-  Robot( b2World& world, float x, float y, float a ) : 
-    pushTime( random() % 40 ),
-    backupTime( 0 ),
-    turnTime( 0),
-    state( 0 ),
-    speedx( 0 ),
-    speeda( 0 ),
-    body( NULL )
-  {
-    b2BodyDef bodyDef;
-    bodyDef.type = b2_dynamicBody;
-    body = world.CreateBody(&bodyDef);
-    
-    b2PolygonShape dynamicBox;
-    dynamicBox.SetAsBox( robotside/2.0, robotside/2.0 );
-    b2FixtureDef fixtureDef;
-    fixtureDef.shape = &dynamicBox;    
-    fixtureDef.density = 10;
-    fixtureDef.friction = 2.0;
-    body->CreateFixture(&fixtureDef);
-    body->SetTransform( b2Vec2( x, y ), a );	
-    //bodies[0]->SetLinearDamping( 5.0 );
-    //bodies[0]->SetAngularDamping( 10.0 );
-
-    //std::cout << "robot mass "  << bodies[0]->GetMass() << std::endl;
-  }
-  
-  void Update()
-  {
-    switch( state )
-      {
-      case 0: // push
-	speedx = maxspeedx;
-	speeda = 0;	    
-	if( --pushTime < 1 )
-	  {
-	    state = 1;
-	    pushTime = 40;
-	  }
-	break;
-	
-      case 1: // backup
-	speedx = -maxspeedx;
-	speeda = 0;	    
-	if( --backupTime < 1 )
-	  {
-	    state = 2;
-	    backupTime = 5;
-	  }
-	break;
-	
-      case 2: // turn
-	speedx = 0;
-	speeda = maxspeeda;	    
-	if( --turnTime < 1 )
-	  {
-	    state = 0;
-	    turnTime = random() % 20;
-	  }
-	break;
-      }
-
-    body->SetLinearVelocity( body->GetWorldVector(b2Vec2( speedx, 0 )));
-    body->SetAngularVelocity( speeda );
-  }
-};
 
 void DrawBody( b2Body* b, const float color[3] )
 {
@@ -261,9 +187,9 @@ void UpdateGui( GLFWwindow* window,
   
   glBegin( GL_LINES );
   glVertex2f( 0,0 );
-  glVertex2f( worldwidth,0 );
+  glVertex2f( WORLDWIDTH,0 );
   glVertex2f( 0,0 );
-  glVertex2f( 0,worldheight );
+  glVertex2f( 0,WORLDHEIGHT );
   glEnd();
   
   /* Swap front and back buffers */
@@ -295,7 +221,7 @@ int main( int argc, char* argv[] )
   b2World world(gravity);
   b2BodyDef groundBodyDef;
   b2PolygonShape groundBox;
-  groundBox.SetAsBox( worldwidth/2.0, 0.01f );    
+  groundBox.SetAsBox( WORLDWIDTH/2.0, 0.01f );    
   
   b2Body* groundBody[4];
   for( int i=0; i<4; i++ )
@@ -304,15 +230,15 @@ int main( int argc, char* argv[] )
       groundBody[i]->CreateFixture(&groundBox, 0.0f);
     }
   
-  groundBody[0]->SetTransform( b2Vec2( worldwidth/2,0 ), 0 );    
-  groundBody[1]->SetTransform( b2Vec2( worldwidth/2,worldheight ), 0 );    
-  groundBody[2]->SetTransform( b2Vec2( 0, worldheight/2 ), M_PI/2.0 );    
-  groundBody[3]->SetTransform( b2Vec2( worldwidth, worldheight/2 ), M_PI/2.0 );    
+  groundBody[0]->SetTransform( b2Vec2( WORLDWIDTH/2,0 ), 0 );    
+  groundBody[1]->SetTransform( b2Vec2( WORLDWIDTH/2,WORLDHEIGHT ), 0 );    
+  groundBody[2]->SetTransform( b2Vec2( 0, WORLDHEIGHT/2 ), M_PI/2.0 );    
+  groundBody[3]->SetTransform( b2Vec2( WORLDWIDTH, WORLDHEIGHT/2 ), M_PI/2.0 );    
   std::vector<Robot*> robots;
   for( int i=0; i<ROBOTS; i++ )
     robots.push_back( new Robot( world, 
-				 drand48() * worldwidth, 
-				 drand48() * worldheight, 
+				 drand48() * WORLDWIDTH, 
+				 drand48() * WORLDHEIGHT, 
 				 -M_PI + drand48() * 2.0 * M_PI ));
   
   
@@ -336,8 +262,8 @@ int main( int argc, char* argv[] )
 	
 	body->SetLinearDamping( 10.0 );
 	body->SetAngularDamping( 10.0 );
-	body->SetTransform( b2Vec2( worldwidth * drand48(), 
-				    worldheight * drand48()),
+	body->SetTransform( b2Vec2( WORLDWIDTH * drand48(), 
+				    WORLDHEIGHT * drand48()),
 			    0 );	    	    
 	
 	body->CreateFixture(&fixtureDef);
@@ -352,8 +278,8 @@ int main( int argc, char* argv[] )
     
     // scale the drawing to fit the whole world in the window, origin
     // at bottom left
-    glScalef( 2.0 / worldwidth, 2.0 / worldheight, 1.0 );
-    glTranslatef( -worldwidth/2.0, -worldheight/2.0, 0 );
+    glScalef( 2.0 / WORLDWIDTH, 2.0 / WORLDHEIGHT, 1.0 );
+    glTranslatef( -WORLDWIDTH/2.0, -WORLDHEIGHT/2.0, 0 );
 
     // get mouse/pointer events
     //glfwSetCursorPosCallback( window, checkmouse );
@@ -367,7 +293,7 @@ int main( int argc, char* argv[] )
     while (!glfwWindowShouldClose(window))
       {
 	for( int i=0; i<ROBOTS; i++ )
-	  robots[i]->Update();
+	  robots[i]->Update( timeStep );
 	
 	if( --draw_interval < 1 )
 	  {	    

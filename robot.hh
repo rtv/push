@@ -12,16 +12,16 @@ public:
       S_COUNT
     } control_state_t;
 
-  static const int PUSH, BACKUP, TURNMAX;
+  static const float PUSH, BACKUP, TURNMAX;
   static const float maxspeedx, maxspeeda;
   static const float size;
 
-  int pushTime, backupTime, turnTime;
+  float pushTime, backupTime, turnTime;
   control_state_t state;
   float speedx, speeda;
   b2Body* body;
   
   Robot( b2World& world, float x, float y, float a );
   
-  void Update();
+  void Update( float timestep );
 };

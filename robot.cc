@@ -3,9 +3,9 @@
 #include "robot.hh"
 
 // static members
-const int Robot::PUSH = 40;
-const int Robot::BACKUP = 5;
-const int Robot::TURNMAX = 20;
+const float Robot::PUSH = 5.0; // seconds
+const float Robot::BACKUP = 1.0;
+const float Robot::TURNMAX = 2.0;
 const float Robot::maxspeedx = 0.5;
 const float Robot::maxspeeda = M_PI/2.0;
 const float Robot::size = 0.3;
@@ -14,7 +14,7 @@ const float Robot::size = 0.3;
 Robot::Robot( b2World& world, float x, float y, float a ) : 
   pushTime( PUSH ),
   backupTime( BACKUP ),
-  turnTime( random() % TURNMAX ),
+  turnTime( drand48() * TURNMAX ),
   state( (control_state_t)(random() % S_COUNT) ), // choose start state at random
   speedx( 0 ),
   speeda( 0 ),
@@ -41,16 +41,18 @@ Robot::Robot( b2World& world, float x, float y, float a ) :
   //bodies[0]->SetAngularDamping( 10.0 );
 }
 
-// called once per GUI update
-void Robot::Update()
+// called once per simulation step, of duration timestep seconds
+void Robot::Update( float timestep )
 {
   // implement the robot behaviour with a little state machine
   switch( state )
     {
     case S_PUSH: // push
       speedx = maxspeedx;
-	speeda = 0;	    
-	if( --pushTime < 1 )
+	speeda = 0;	 
+	pushTime -= timestep;
+	//std::cout << "Pushing " << pushTime << std::endl;
+	if( pushTime <= 0 )
 	  {
 	    state = S_BACKUP;
 	    pushTime = PUSH;
@@ -60,7 +62,9 @@ void Robot::Update()
     case S_BACKUP: // backup
       speedx = -maxspeedx;
       speeda = 0;	    
-      if( --backupTime < 1 )
+      backupTime -= timestep;
+      //std::cout << "Backup " << backupTime << std::endl;
+      if( backupTime <= 0 )
 	{
 	  state = S_TURN;
 	  backupTime = BACKUP;
@@ -70,10 +74,12 @@ void Robot::Update()
     case S_TURN: // turn
       speedx = 0;
       speeda = maxspeeda;	    
-      if( --turnTime < 1 )
+      turnTime -= timestep;
+      //std::cout << "Turning " << turnTime << std::endl;
+      if( turnTime <= 0 )
 	{
 	  state = S_PUSH;
-	  turnTime = random() % TURNMAX;
+	  turnTime = drand48() * TURNMAX;
 	}
       break;
     default:
