@@ -16,10 +16,10 @@ void checkmouse( GLFWwindow* win, double x, double y)
   mousey = -y/10.0;
 }
 
-const float WORLDWIDTH = 6;
-const float WORLDHEIGHT = 6;
+const float WORLDWIDTH = 7;
+const float WORLDHEIGHT = 7;
 
-const size_t ROBOTS = 10;
+const size_t ROBOTS = 16;
 const size_t BODIES = 64;
 int DRAW_SKIP = 1;
 
