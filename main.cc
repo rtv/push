@@ -107,7 +107,7 @@ public:
   b2Body* body;
   
   Robot( b2World& world, float x, float y, float a ) : 
-    pushTime( random() % 10 ),
+    pushTime( random() % 40 ),
     backupTime( 0 ),
     turnTime( 0),
     state( 0 ),
