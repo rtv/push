@@ -1,6 +1,9 @@
 #include <GLFW/glfw3.h>
 #include <Box2D/Box2D.h>
 
+#include <getopt.h>
+#include <unistd.h> // for usleep(3)
+
 #include <vector>
 #include <iostream>
 
@@ -16,31 +19,31 @@ void checkmouse( GLFWwindow* win, double x, double y)
   mousey = -y/10.0;
 }
 
+bool gui_paused = true;
+bool gui_step = false;
+
 const float WORLDWIDTH = 7;
 const float WORLDHEIGHT = 7;
 
-const size_t ROBOTS = 16;
-const size_t BODIES = 64;
+size_t ROBOTS = 8;
+size_t BODIES = 32;
 int DRAW_SKIP = 1;
 
 const float maxspeedx = 0.5;
 const float maxspeeda = M_PI/2.0;
 
-const float boxside = 0.33;
-const float robotside = 0.3;
-
-//double speedx = 0.0; // meters per second
-//double speeda = 0.0; // degrees per second
+float boxside = 0.32;
 
 const float c_yellow[3] = {1.0, 1.0, 0.0 };
 const float c_red[3] = {1.0, 0.0, 0.0 };
+const float c_darkred[3] = {0.8, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
 const float c_gray[3] = { 0.9, 0.9, 1.0 };
 
 // Prepare for simulation. Typically we use a time step of 1/60 of a
 // second (60Hz) and 10 iterations. This provides a high quality simulation
 // in most game scenarios.
-const float32 timeStep = 1.0 / 10.0;
+const float32 timeStep = 1.0 / 30.0;
 const int32 velocityIterations = 6;
 const int32 positionIterations = 2;
 
@@ -50,6 +53,17 @@ void key_callback( GLFWwindow* window,
   if(action == GLFW_PRESS)
     switch( key )
       {
+      case GLFW_KEY_SPACE:
+	gui_paused = !gui_paused;
+	break;
+
+      case GLFW_KEY_S:
+	gui_step = !gui_step;
+
+	if( ! gui_step )
+	  gui_paused = false;
+
+	break;
       // case GLFW_KEY_W:
       //   speedx = maxspeedx;
       // 	break;
@@ -70,7 +84,7 @@ void key_callback( GLFWwindow* window,
 	break;
       case GLFW_KEY_RIGHT_BRACKET:
 	if( mods & GLFW_MOD_SHIFT )
-	  DRAW_SKIP = 100;
+	  DRAW_SKIP = 500;
 	else
 	  DRAW_SKIP  = ++DRAW_SKIP;
 	break;
@@ -164,7 +178,10 @@ void UpdateGui( GLFWwindow* window,
     DrawBody( bodies[i], c_gray );
   
   for( int i=0; i<robots.size(); i++ )
-    DrawBody( robots[i]->body, c_red );
+    {
+      DrawBody( robots[i]->body, c_red );
+      DrawBody( robots[i]->bumper, c_darkred );
+    }
 
   // draw a nose on the robot
   glColor3f( 1,1,1 );
@@ -176,12 +193,12 @@ void UpdateGui( GLFWwindow* window,
       const b2Transform& t = robots[i]->body->GetTransform();
       const float a = t.q.GetAngle();
 
-      glVertex2f( t.p.x + robotside/2.0 * cos(a),
-		  t.p.y + robotside/2.0 * sin(a) );		  
-      glVertex2f( t.p.x + robotside/3.0 * cos(a+0.5),
-		  t.p.y + robotside/3.0 * sin(a+0.5) );		  
-      glVertex2f( t.p.x + robotside/3.0 * cos(a-0.5),
-		  t.p.y + robotside/3.0 * sin(a-0.5) );		  
+      glVertex2f( t.p.x + Robot::SIZE/2.0 * cos(a),
+		  t.p.y + Robot::SIZE/2.0 * sin(a) );		  
+      glVertex2f( t.p.x + Robot::SIZE/3.0 * cos(a+0.5),
+		  t.p.y + Robot::SIZE/3.0 * sin(a+0.5) );		  
+      glVertex2f( t.p.x + Robot::SIZE/3.0 * cos(a-0.5),
+		  t.p.y + Robot::SIZE/3.0 * sin(a-0.5) );		  
     }
   glEnd();
   
@@ -199,12 +216,79 @@ void UpdateGui( GLFWwindow* window,
   glfwPollEvents();
 }
 
+class MyContactListener : public b2ContactListener {
+public:
+  void BeginContact(b2Contact* contact) 
+  {  /* handle begin event */ 
+    // set the push time very small
+  }
+ 
+
+ //void EndContact(b2Contact* contact) { /* handle end event */ }
+  //void PreSolve(b2Contact* contact, const b2Manifold* oldManifold) { /* handle pre-solve event */ }
+  //  void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse)
+  //{ /* handle post-solve event */ } 
+};
+
+/* options descriptor */
+static struct option longopts[] = {
+	{ "robots",  required_argument,   NULL,  'r' },
+	{ "boxes",  required_argument,   NULL,  'b' },
+	{ "robotsize",  required_argument,   NULL,  'z' },
+	{ "boxsize",  required_argument,   NULL,  's' },
+	//	{ "help",  optional_argument,   NULL,  'h' },
+	{ NULL, 0, NULL, 0 }
+};
+
 int main( int argc, char* argv[] )
 {
   srand48( time(NULL) );
   
   GLFWwindow* window;
+ 
+  int ch=0, optindex=0;
+  //bool usegui = true;
+  //bool showclock = false;
   
+  while ((ch = getopt_long(argc, argv, "r:b:s:z:", longopts, &optindex)) != -1)
+    {
+      switch( ch )
+	{
+	case 0: // long option given
+	  printf( "option %s given\n", longopts[optindex].name );
+
+          if (optarg)
+            printf (" with arg %s", optarg);
+          printf ("\n");
+	  break;
+
+	case 'r':
+	  ROBOTS = atoi( optarg );
+	  break;
+	case 'b':
+	  BODIES = atoi( optarg );
+	  break;
+	case 'z':
+	  Robot::SIZE = atof( optarg );
+	  break;
+	case 's':
+	  boxside = atof( optarg );
+	  break;
+	// case 'h':  
+	// case '?':  
+	//   puts( USAGE );
+	//   exit(0);
+	//   break;
+	// default:
+	//   printf("unhandled option %c\n", ch );
+	//   puts( USAGE );
+	//   exit(0);
+	}
+    }
+  
+  puts("");// end the first start-up line
+
+ 
   /* Initialize the library */
   if (!glfwInit())
     return -1;
@@ -250,7 +334,7 @@ int main( int argc, char* argv[] )
   b2FixtureDef fixtureDef;
   fixtureDef.shape = &dynamicBox;
   fixtureDef.density = 5;
-  fixtureDef.friction = 3.0;
+  fixtureDef.friction = 1.0;
   fixtureDef.restitution = 0.1;
   
     std::vector<b2Body*> bodies;    
@@ -301,9 +385,24 @@ int main( int argc, char* argv[] )
 	    draw_interval = DRAW_SKIP;
 	  }
 
-	// Instruct the world to perform a single step of simulation.
-	// It is generally best to keep the time step and iterations fixed.
-	world.Step(timeStep, velocityIterations, positionIterations);	
+	if( ! gui_paused )
+	  {
+	    // Instruct the world to perform a single step of simulation.
+	    // It is generally best to keep the time step and iterations fixed.
+	    world.Step(timeStep, velocityIterations, positionIterations);	
+
+	    if( gui_step )
+	      gui_paused = true;
+
+
+	    // b2Vec2 force = robots[0]->joint->GetReactionForce( 1.0/timeStep );
+	    // float trans = robots[0]->joint->GetJointTranslation();
+	    
+	    // std::cout << "bump force " << force.x << ' ' << force.y << " trans " << trans << std::endl;
+	    
+	  }
+	else
+	  usleep(1000);
       }
     
     glfwTerminate();

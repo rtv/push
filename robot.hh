@@ -14,12 +14,14 @@ public:
 
   static const float PUSH, BACKUP, TURNMAX;
   static const float SPEEDX, SPEEDA;
-  static const float SIZE;
+
+  static float SIZE;
 
   float pushTime, backupTime, turnTime;
   control_state_t state;
   float speedx, speeda;
-  b2Body* body;
+  b2Body *body, *bumper;
+  b2PrismaticJoint* joint;
   
   Robot( b2World& world, float x, float y, float a );
   
