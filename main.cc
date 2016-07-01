@@ -89,7 +89,7 @@ public:
 }; // class Pusher
 
 // static members
-const float Pusher::PUSH = 3.0; // seconds
+const float Pusher::PUSH = 10.0; // seconds
 const float Pusher::BACKUP = 0.5;
 const float Pusher::TURNMAX = 2.0;
 const float Pusher::SPEEDX = 0.5;
@@ -100,10 +100,10 @@ const float Pusher::maxspeeda = M_PI/2.0;
 
 int main( int argc, char* argv[] )
 {
-  float WIDTH = 7;
-  float HEIGHT = 7;
-  size_t ROBOTS = 8;
-  size_t BOXES = 32;
+  float WIDTH = 8;
+  float HEIGHT = 8;
+  size_t ROBOTS = 16;
+  size_t BOXES = 128;
   float32 timeStep = 1.0 / 30.0;
 
   /* options descriptor */

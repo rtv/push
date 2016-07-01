@@ -5,20 +5,36 @@
 std::vector<Light> Robot::lights(2);
 
 float Box::size = 0.32;
-float Robot::size = 0.2;
+float Robot::size = 0.3;
 
 // constructor
   Robot::Robot( World& world, const float x, const float y, const float a ) : 
   body( NULL ),
   joint( NULL )
 {
-  lights[0].x = 2;
-  lights[0].y = 2;
-  lights[0].intensity = 0.5;
+  lights[0].x = 3;
+  lights[0].y = 4;
+  lights[0].intensity = 0.6;
 
-  lights[1].x = 5;
+  lights[1].x = 6;
   lights[1].y = 5;
-  lights[1].intensity = 0.3;
+  lights[1].intensity = 0.8;
+
+  // lights[2].x = 4;
+  // lights[2].y = 2;
+  // lights[2].intensity = 0.6;
+
+  // lights[3].x = 5;
+  // lights[3].y = 2;
+  // lights[3].intensity = 0.6;
+
+  // lights[4].x = 5;
+  // lights[4].y = 5;
+  // lights[4].intensity = 0.6;
+
+  // lights[5].x = 6;
+  // lights[5].y = 6;
+  // lights[5].intensity = 0.6;
 
   b2BodyDef bodyDef;
   bodyDef.type = b2_dynamicBody;
@@ -330,7 +346,7 @@ void GuiWorld::Step( float timestep,
 	   it != Robot::lights.end(); 
 	   it++ )
 	{
-	  DrawDisk( it->x, it->x, sqrt( it->intensity ) );
+	  DrawDisk( it->x, it->y, sqrt( it->intensity ) );
 	}
       
       /* Swap front and back buffers */
