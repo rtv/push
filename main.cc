@@ -283,14 +283,9 @@ static struct option longopts[] = {
 
 int main( int argc, char* argv[] )
 {
-  srand48( time(NULL) );
-  
-  GLFWwindow* window;
+  srand48( time(NULL) );  
  
-  int ch=0, optindex=0;
-  //bool usegui = true;
-  //bool showclock = false;
-  
+  int ch=0, optindex=0;  
   while ((ch = getopt_long(argc, argv, "r:b:s:z:", longopts, &optindex)) != -1)
     {
       switch( ch )
@@ -329,13 +324,12 @@ int main( int argc, char* argv[] )
   
   puts("");// end the first start-up line
 
- 
-  /* Initialize the library */
+  /* Initialize the gui library */
   if (!glfwInit())
     return -1;
   
   /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(800, 800, "S3", NULL, NULL);
+  GLFWwindow* window = glfwCreateWindow(800, 800, "S3", NULL, NULL);
   if (!window)
     {
       glfwTerminate();
@@ -366,9 +360,8 @@ int main( int argc, char* argv[] )
       robots.push_back( new Robot( world, 
 				   drand48() * WORLDWIDTH, 
 				   drand48() * WORLDHEIGHT, 
-				   -M_PI + drand48() * 2.0 * M_PI ));
-      
-      robots.back()->AddController( new DemoPusher() );
+				   -M_PI + drand48() * 2.0 * M_PI,
+				   new DemoPusher() ));
     }
   
   // Define another box shape for our dynamic body.
@@ -421,9 +414,9 @@ int main( int argc, char* argv[] )
     
     int draw_interval = DRAW_SKIP;
     
-    // initialize all controllers
-    for( int i=0; i<ROBOTS; i++ )
-      robots[i]->Init();
+    // // initialize all controllers
+    // for( int i=0; i<ROBOTS; i++ )
+    //   robots[i]->Init();
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -445,13 +438,6 @@ int main( int argc, char* argv[] )
 
 	    if( gui_step )
 	      gui_paused = true;
-
-
-	    // b2Vec2 force = robots[0]->joint->GetReactionForce( 1.0/timeStep );
-	    // float trans = robots[0]->joint->GetJointTranslation();
-	    
-	    // std::cout << "bump force " << force.x << ' ' << force.y << " trans " << trans << std::endl;
-	    
 	  }
 	else
 	  usleep(1000);

@@ -7,8 +7,16 @@ std::vector<Light> Robot::lights(2);
 
 float Robot::SIZE = 0.15;
 
+// Robot::Robot( b2World& world, Ctrl* ctrl = NULL ) : 
+//   x( 
+//   body( NULL ),
+//   joint( NULL )
+// {
+//   Init();
+// };
+    
 // constructor
-Robot::Robot( b2World& world, const float x, const float y, const float a ) : 
+  Robot::Robot( b2World& world, const float x, const float y, const float a, Ctrl* ctrl ) : 
   body( NULL ),
   joint( NULL )
 {
@@ -70,10 +78,19 @@ Robot::Robot( b2World& world, const float x, const float y, const float a ) :
   bumper->SetTransform( body->GetWorldPoint( b2Vec2( SIZE/2,0) ), a );	
 
 
+  if( ctrl )
+    AddController( ctrl );
+
   // any need for this?
   //bodies[0]->SetLinearDamping( 5.0 );
   //bodies[0]->SetAngularDamping( 10.0 );
+  //  Init();
 }
+
+// void Robot::Init()
+// {
+// }
+
 
 float Robot::GetLightIntensity( void )
 {
@@ -109,7 +126,7 @@ void Robot::Update( float timestep )
     (*it)->Update( *this, timestep );
 }
 
-void Robot::Init( void )
+void Robot::InitControllers( void )
 {
   // init all added controllers
   for( std::vector<Ctrl*>::iterator it = ctrls.begin();

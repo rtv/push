@@ -33,7 +33,13 @@ public:
     
   std::vector<Ctrl*> ctrls;
 
-  Robot( b2World& world, float x, float y, float a );  
+  // places robot at specified location
+  Robot( b2World& world, float x, float y, float a, Ctrl* c = NULL );  
+
+  // places robot at random
+  //Robot( b2World& world, Ctrl* c = NULL );  
+  //void Init();
+
   void Update( float timestep );
 
   // add a controller
@@ -43,7 +49,7 @@ public:
   }
 
   // Initializes all controllers
-  void Init( void );
+  void InitControllers( void );
 
   // get sensor data
   float GetLightIntensity( void );
