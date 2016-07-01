@@ -1,4 +1,5 @@
 #include <Box2D/Box2D.h>
+#include <GLFW/glfw3.h>
 
 #include <vector>
 
@@ -11,46 +12,61 @@ public:
   float x, y; // location
 };
 
-// superclass specifies controller interface
-class Ctrl
+class World 
 {
 public:
-  Ctrl(){};
-  virtual void Init( Robot& bot ){};
-  virtual void Update( Robot& bot, float timestep ){};
-};
+  
+  b2World* b2world;
+  float width, height;
+  
+  World( float width, float height ) :
+    width(width),
+    height(height),
+    b2world( new b2World( b2Vec2( 0,0 ))) // gravity 
+  {
+    b2BodyDef groundBodyDef;
+    b2PolygonShape groundBox;
+    groundBox.SetAsBox( width/2.0, 0.01f );    
+    
+    b2Body* groundBody[4];
+    for( int i=0; i<4; i++ )
+      {
+	groundBody[i] = b2world->CreateBody(&groundBodyDef);	
+	groundBody[i]->CreateFixture(&groundBox, 0.0f);
+      }
+    
+    groundBody[0]->SetTransform( b2Vec2( width/2,0 ), 0 );    
+    groundBody[1]->SetTransform( b2Vec2( width/2,height ), 0 );    
+    groundBody[2]->SetTransform( b2Vec2( 0, height/2 ), M_PI/2.0 );    
+    groundBody[3]->SetTransform( b2Vec2( width, height/2 ), M_PI/2.0 );    
+  }
 
+  void Step( float timestep )
+  {
+    const int32 velocityIterations = 6;
+    const int32 positionIterations = 2;
+
+    // Instruct the world to perform a single step of simulation.
+    // It is generally best to keep the time step and iterations fixed.
+    b2world->Step( timestep, velocityIterations, positionIterations);	
+  }
+};
 
 class Robot
 {
 public:
-
-  static float SIZE;
+  
+  static float size;
   static std::vector<Light> lights;
- 
+  
   b2Body *body, *bumper;
   b2PrismaticJoint* joint;
-    
-  std::vector<Ctrl*> ctrls;
+  
+  Robot( World& world, float x, float y, float a );  
+  
+  virtual void Update( float timestep ) = 0; // pure 
 
-  // places robot at specified location
-  Robot( b2World& world, float x, float y, float a, Ctrl* c = NULL );  
-
-  // places robot at random
-  //Robot( b2World& world, Ctrl* c = NULL );  
-  //void Init();
-
-  void Update( float timestep );
-
-  // add a controller
-  void AddController( Ctrl* ctrl )
-  {
-    ctrls.push_back( ctrl );
-  }
-
-  // Initializes all controllers
-  void InitControllers( void );
-
+protected:
   // get sensor data
   float GetLightIntensity( void );
   bool GetBumperPressed( void );
@@ -59,29 +75,56 @@ public:
   void SetSpeed( float x, float y, float a );
 };
 
-
-class DemoPusher : public Ctrl
+class Box 
 {
-private:
-  typedef enum 
-    {
-      S_PUSH = 0,
-      S_BACKUP,
-      S_TURN,
-      S_COUNT
-    } control_state_t;
-
-  static const float PUSH, BACKUP, TURNMAX;
-  static const float SPEEDX, SPEEDA;
-
-  float timeleft;
-  control_state_t state;
-  float speedx, speeda;
-
 public:
-  DemoPusher();
-  virtual void Init( Robot& bot );
-  virtual void Update( Robot& bot, float timestep );
+  static float size;
+
+  b2Body* body;
+
+  Box( World& world )
+    : body(NULL)
+  {
+    b2PolygonShape dynamicBox;
+    dynamicBox.SetAsBox( size/2.0, size/2.0 );
+    
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &dynamicBox;
+    fixtureDef.density = 5;
+    fixtureDef.friction = 1.0;
+    fixtureDef.restitution = 0.1;
+
+    b2BodyDef bodyDef;
+    bodyDef.type = b2_dynamicBody;
+    
+    body = world.b2world->CreateBody(&bodyDef);    
+    body->SetLinearDamping( 10.0 );
+    body->SetAngularDamping( 10.0 );
+    body->SetTransform( b2Vec2( world.width * drand48(), 
+				world.height * drand48()),
+			0 );	    	    
+      
+    body->CreateFixture(&fixtureDef);
+  }
 };
 
+class GuiWorld : public World
+{
+public:
+  static bool paused;
+  static bool step;
+  static int skip;
 
+  GLFWwindow* window;
+  int draw_interval;
+  
+  GuiWorld( float width, float height );
+  ~GuiWorld();
+  
+  virtual void Step( float timestep,
+		     const std::vector<Robot*>& robots, 
+		     const std::vector<Box*>& bodies );
+  
+  bool RequestShutdown();
+    
+};

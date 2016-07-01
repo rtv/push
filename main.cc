@@ -1,5 +1,3 @@
-#include <GLFW/glfw3.h>
-#include <Box2D/Box2D.h>
 
 #include <getopt.h>
 #include <unistd.h> // for usleep(3)
@@ -9,290 +7,122 @@
 
 #include "robot.hh"
 
-double mousex = 0;
-double mousey = 0;
-
-void checkmouse( GLFWwindow* win, double x, double y) 
+class Pusher : public Robot
 {
-  //std::cout << x << ' ' << y << std::endl;
-  mousex = x/10.0;
-  mousey = -y/10.0;
-}
-
-bool gui_paused = true;
-bool gui_step = false;
-
-const float WORLDWIDTH = 7;
-const float WORLDHEIGHT = 7;
-
-size_t ROBOTS = 8;
-size_t BODIES = 32;
-int DRAW_SKIP = 1;
-
-const float maxspeedx = 0.5;
-const float maxspeeda = M_PI/2.0;
-
-float boxside = 0.32;
-
-const float c_yellow[3] = {1.0, 1.0, 0.0 };
-const float c_red[3] = {1.0, 0.0, 0.0 };
-const float c_darkred[3] = {0.8, 0.0, 0.0 };
-const float c_tan[3] = { 0.8, 0.6, 0.5};
-const float c_gray[3] = { 0.9, 0.9, 1.0 };
-
-// Prepare for simulation. Typically we use a time step of 1/60 of a
-// second (60Hz) and 10 iterations. This provides a high quality simulation
-// in most game scenarios.
-const float32 timeStep = 1.0 / 30.0;
-const int32 velocityIterations = 6;
-const int32 positionIterations = 2;
-
-void key_callback( GLFWwindow* window, 
-		   int key, int scancode, int action, int mods)
-{
-  if(action == GLFW_PRESS)
-    switch( key )
-      {
-      case GLFW_KEY_SPACE:
-	gui_paused = !gui_paused;
-	break;
-
-      case GLFW_KEY_S:
-	gui_step = !gui_step;
-
-	if( ! gui_step )
-	  gui_paused = false;
-
-	break;
-      // case GLFW_KEY_W:
-      //   speedx = maxspeedx;
-      // 	break;
-      // case GLFW_KEY_S:
-      //   speedx = -maxspeedx;
-      // 	break;
-      // case GLFW_KEY_A:
-      //   speeda = maxspeeda;
-      // 	break;
-      // case GLFW_KEY_D:
-      //   speeda = -maxspeeda;
-      // 	break;
-      case GLFW_KEY_LEFT_BRACKET:
-	if( mods & GLFW_MOD_SHIFT )
-	  DRAW_SKIP = 0;
-	else
-	  DRAW_SKIP  = std::max( 0, --DRAW_SKIP );
-	break;
-      case GLFW_KEY_RIGHT_BRACKET:
-	if( mods & GLFW_MOD_SHIFT )
-	  DRAW_SKIP = 500;
-	else
-	  DRAW_SKIP  = ++DRAW_SKIP;
-	break;
-      default:
-	break;
-      }
-
- // if( action == GLFW_RELEASE )
- //    switch( key )
- //      {
- //      case GLFW_KEY_W:
- //        if( speedx > 0 ) speedx = 0.0;
- // 	break;
- //      case GLFW_KEY_S:
- //        if( speedx < 0 ) speedx = 0.0;
- // 	break;
- //      case GLFW_KEY_A:
- //        if( speeda > 0 ) speeda = 0.0;
- // 	break;
- //      case GLFW_KEY_D:
- //        if( speeda < 0 ) speeda = 0.0;
- // 	break;
-  //      default:
-  //	break;
-  //    }
-}
-
-
-void DrawBody( b2Body* b, const float color[3] )
-{
-  for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) 
+private:
+  typedef enum 
     {
-      switch( f->GetType() )
-	{
-	case b2Shape::e_circle:
-	  {
-	    b2CircleShape* circle = (b2CircleShape*)f->GetShape();
-	  }
-	  break;
-	case b2Shape::e_polygon:
-	  {
-	    b2PolygonShape* poly = (b2PolygonShape*)f->GetShape();
-	    
-	    const int count = poly->GetVertexCount();
-	    
-	    //glColor3f( color[0]*0.8, color[1]*0.8, color[2]*0.8 );
-	    glColor3fv( color );
-	    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
-	    glBegin( GL_POLYGON );	
-	    
-	    for( int i = 0; i < count; i++ )
-	      {
-		const b2Vec2& v = poly->GetVertex( i );
-		
-		const b2Vec2 w = b->GetWorldPoint( v );
-		
-		glVertex2f( w.x, w.y );
-	      }
-	    glEnd();		  
-	    
-	    glLineWidth( 2.0 );
-	    glColor3f( color[0]/5, color[1]/5, color[2]/5 );
-	    //glColor3fv( color );
-	    //glColor3f( 0,0,0 );
-	    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	    glBegin( GL_POLYGON );	
-	    
-	    for( int i = 0; i < count; i++ )
-	       {
-		 const b2Vec2& v = poly->GetVertex( i );		 
-	         const b2Vec2 w = b->GetWorldPoint( v );		 
-	         glVertex2f( w.x, w.y );
-	       }
-	    glEnd();		  
-	  }
-	  break;
-	default:
-	  break;
-	} 
-    }
-}
-
-
-void DrawDisk(float cx, float cy, float r ) 
-{ 
-  const int num_segments = 32.0 * sqrtf( r );
+      S_PUSH = 0,
+      S_BACKUP,
+      S_TURN,
+      S_COUNT
+    } control_state_t;
   
-  const float theta = 2 * M_PI / float(num_segments); 
-  const float c = cosf(theta);//precalculate the sine and cosine
-  const float s = sinf(theta);
-  float t;
+  static const float PUSH, BACKUP, TURNMAX;
+  static const float SPEEDX, SPEEDA;
+  static const float maxspeedx, maxspeeda;
   
-  float x = r; //we start at angle = 0 
-  float y = 0; 
-  
-  //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-  glBegin(GL_TRIANGLE_STRIP); 
-  for(int ii = 0; ii < num_segments; ii++) 
-    { 
-      glVertex2f( x + cx, y + cy);//output vertex 
-      glVertex2f( cx, cy );//output vertex 
-      
-      //apply the rotation matrix
-      t = x;
-      x = c * x - s * y;
-      y = s * t + c * y;
-    } 
+  float timeleft;
+  control_state_t state;
+  float speedx, speeda;
 
-  glVertex2f( r + cx, 0 + cy); // first point again to close disk
-
-  glEnd(); 
-}
-
-
-void UpdateGui( GLFWwindow* window,
-		const std::vector<Robot*>& robots, 
-		const std::vector<b2Body*>& bodies ) 
-{
-  glClearColor( 0.8, 0.8, 0.8, 1.0 ); 
-  glClear(GL_COLOR_BUFFER_BIT);	
-  
-  for( int i=0; i<bodies.size(); i++ )
-    DrawBody( bodies[i], c_gray );
-  
-  for( int i=0; i<robots.size(); i++ )
-    {
-      DrawBody( robots[i]->body, c_red );
-      DrawBody( robots[i]->bumper, c_darkred );
-    }
-
-  // draw a nose on the robot
-  glColor3f( 1,1,1 );
-  glPointSize( 12 );
-  glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-  glBegin( GL_TRIANGLES );
-  for( int i=0; i<robots.size(); i++ )
-    {      
-      const b2Transform& t = robots[i]->body->GetTransform();
-      const float a = t.q.GetAngle();
-
-      glVertex2f( t.p.x + Robot::SIZE/2.0 * cos(a),
-		  t.p.y + Robot::SIZE/2.0 * sin(a) );		  
-      glVertex2f( t.p.x + Robot::SIZE/3.0 * cos(a+0.5),
-		  t.p.y + Robot::SIZE/3.0 * sin(a+0.5) );		  
-      glVertex2f( t.p.x + Robot::SIZE/3.0 * cos(a-0.5),
-		  t.p.y + Robot::SIZE/3.0 * sin(a-0.5) );		  
-    }
-  glEnd();
-  
-  glBegin( GL_LINES );
-  glVertex2f( 0,0 );
-  glVertex2f( WORLDWIDTH,0 );
-  glVertex2f( 0,0 );
-  glVertex2f( 0,WORLDHEIGHT );
-  glEnd();
-  
-  // draw the light sources  
-  glColor4f( 1,1,0,0.2 );
-  for( std::vector<Light>::iterator it = Robot::lights.begin(); 
-       it != Robot::lights.end(); 
-       it++ )
-    {
-      DrawDisk( it->x, it->x, sqrt( it->intensity ) );
-    }
-  
-  /* Swap front and back buffers */
-  glfwSwapBuffers(window);
-  
-  /* Poll for and process events */
-  glfwPollEvents();
-}
-
-class MyContactListener : public b2ContactListener {
 public:
-  void BeginContact(b2Contact* contact) 
-  {  /* handle begin event */ 
-    // set the push time very small
+  
+  // constructor
+  Pusher( World& world ) : 
+    Robot( world, 
+	   drand48() * world.width, // random location
+	   drand48() * world.height, 
+	   -M_PI + drand48() * 2.0*M_PI ), 
+    state( S_TURN ),
+    timeleft( drand48() * TURNMAX ),
+    speedx( 0 ),
+    speeda( 0 )
+  {
   }
- 
+  
+  virtual void Update( float timestep )
+  {
+    // IMPLEMENT ROBOT ROBOT BEHAVIOUR WITH A LITTLE STATE MACHINE
+    
+    // count down to changing control state
+    timeleft -= timestep;
+    
+    // if we are pushing and the bump switch goes off or the light is
+    // too bright, force a change of control state
+    if( state == S_PUSH && ( GetLightIntensity() > 0.5 || GetBumperPressed() ) )
+      {
+	timeleft = 0.0; // end pushing right now
+      }
+    
+    if( timeleft <= 0 ) // time to change to another behaviour
+      switch( state )
+	{
+	case S_PUSH:
+	  state = S_BACKUP;
+	  timeleft = BACKUP;
+	  speedx = -SPEEDX;
+	  speeda = 0;	 
+	  break;
+	  
+	case S_BACKUP: 
+	  state = S_TURN;
+	  timeleft = drand48() * TURNMAX;
+	  speedx = 0;
+	  speeda = SPEEDA;	    
+	  break;
+	  
+	case S_TURN: 
+	  state = S_PUSH;
+	  timeleft = PUSH;
+	  speedx = SPEEDX;
+	  speeda = 0;	 
+	  break;
+	  
+	default:
+	  std::cout << "invalid control state: " << state << std::endl;
+	exit(1);
+	}
+    
+    SetSpeed( speedx, 0, speeda );
+  }
+}; // class Pusher
 
- //void EndContact(b2Contact* contact) { /* handle end event */ }
-  //void PreSolve(b2Contact* contact, const b2Manifold* oldManifold) { /* handle pre-solve event */ }
-  //  void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse)
-  //{ /* handle post-solve event */ } 
-};
+// static members
+const float Pusher::PUSH = 3.0; // seconds
+const float Pusher::BACKUP = 0.5;
+const float Pusher::TURNMAX = 2.0;
+const float Pusher::SPEEDX = 0.5;
+const float Pusher::SPEEDA = M_PI/2.0;
+const float Pusher::maxspeedx = 0.5;
+const float Pusher::maxspeeda = M_PI/2.0;
 
-/* options descriptor */
-static struct option longopts[] = {
-	{ "robots",  required_argument,   NULL,  'r' },
-	{ "boxes",  required_argument,   NULL,  'b' },
-	{ "robotsize",  required_argument,   NULL,  'z' },
-	{ "boxsize",  required_argument,   NULL,  's' },
-	//	{ "help",  optional_argument,   NULL,  'h' },
-	{ NULL, 0, NULL, 0 }
-};
 
 int main( int argc, char* argv[] )
 {
-  srand48( time(NULL) );  
- 
+  float WIDTH = 7;
+  float HEIGHT = 7;
+  size_t ROBOTS = 8;
+  size_t BOXES = 32;
+  float32 timeStep = 1.0 / 30.0;
+
+  /* options descriptor */
+  static struct option longopts[] = {
+    { "robots",  required_argument,   NULL,  'r' },
+    { "boxes",  required_argument,   NULL,  'b' },
+    { "robotsize",  required_argument,   NULL,  'z' },
+    { "boxsize",  required_argument,   NULL,  's' },
+    //	{ "help",  optional_argument,   NULL,  'h' },
+    { NULL, 0, NULL, 0 }
+  };
+  
   int ch=0, optindex=0;  
   while ((ch = getopt_long(argc, argv, "r:b:s:z:", longopts, &optindex)) != -1)
     {
       switch( ch )
 	{
 	case 0: // long option given
-	  printf( "option %s given\n", longopts[optindex].name );
-
+	  printf( "option %s given", longopts[optindex].name );
           if (optarg)
             printf (" with arg %s", optarg);
           printf ("\n");
@@ -302,147 +132,45 @@ int main( int argc, char* argv[] )
 	  ROBOTS = atoi( optarg );
 	  break;
 	case 'b':
-	  BODIES = atoi( optarg );
+	  BOXES = atoi( optarg );
 	  break;
 	case 'z':
-	  Robot::SIZE = atof( optarg );
+	  Robot::size = atof( optarg );
 	  break;
 	case 's':
-	  boxside = atof( optarg );
+	  Box::size = atof( optarg );
 	  break;
 	// case 'h':  
 	// case '?':  
 	//   puts( USAGE );
 	//   exit(0);
 	//   break;
-	// default:
-	//   printf("unhandled option %c\n", ch );
-	//   puts( USAGE );
-	//   exit(0);
+	 default:
+	   printf("unhandled option %c\n", ch );
+	   //puts( USAGE );
+	   exit(0);
 	}
     }
   
-  puts("");// end the first start-up line
-
-  /* Initialize the gui library */
-  if (!glfwInit())
-    return -1;
+  GuiWorld world( WIDTH, HEIGHT );
   
-  /* Create a windowed mode window and its OpenGL context */
-  GLFWwindow* window = glfwCreateWindow(800, 800, "S3", NULL, NULL);
-  if (!window)
-    {
-      glfwTerminate();
-      return -1;
-    }
+  std::vector<Box*> boxes;    
+  for( int i=0; i<BOXES; i++ )
+    boxes.push_back( new Box( world ) );
   
-  b2Vec2 gravity(0.0f, 0.0f );
-  b2World world(gravity);
-  b2BodyDef groundBodyDef;
-  b2PolygonShape groundBox;
-  groundBox.SetAsBox( WORLDWIDTH/2.0, 0.01f );    
-  
-  b2Body* groundBody[4];
-  for( int i=0; i<4; i++ )
-    {
-      groundBody[i] = world.CreateBody(&groundBodyDef);	
-      groundBody[i]->CreateFixture(&groundBox, 0.0f);
-    }
-  
-  groundBody[0]->SetTransform( b2Vec2( WORLDWIDTH/2,0 ), 0 );    
-  groundBody[1]->SetTransform( b2Vec2( WORLDWIDTH/2,WORLDHEIGHT ), 0 );    
-  groundBody[2]->SetTransform( b2Vec2( 0, WORLDHEIGHT/2 ), M_PI/2.0 );    
-  groundBody[3]->SetTransform( b2Vec2( WORLDWIDTH, WORLDHEIGHT/2 ), M_PI/2.0 );    
-
   std::vector<Robot*> robots;
   for( int i=0; i<ROBOTS; i++ )
+    robots.push_back( new Pusher( world ) );
+    
+  /* Loop until the user closes the window */
+  while( !world.RequestShutdown() )
     {
-      robots.push_back( new Robot( world, 
-				   drand48() * WORLDWIDTH, 
-				   drand48() * WORLDHEIGHT, 
-				   -M_PI + drand48() * 2.0 * M_PI,
-				   new DemoPusher() ));
+      // if( ! GuiWorld::paused )
+      for( int i=0; i<ROBOTS; i++ )
+	robots[i]->Update( timeStep );
+      
+      world.Step( timeStep, robots, boxes );
     }
   
-  // Define another box shape for our dynamic body.
-  b2PolygonShape dynamicBox;
-  dynamicBox.SetAsBox( boxside/2.0, boxside/2.0 );
-  
-  // Define the dynamic body fixture.
-  b2FixtureDef fixtureDef;
-  fixtureDef.shape = &dynamicBox;
-  fixtureDef.density = 5;
-  fixtureDef.friction = 1.0;
-  fixtureDef.restitution = 0.1;
-  
-    std::vector<b2Body*> bodies;    
-    for( int i=0; i<BODIES; i++ )
-      {
-	b2BodyDef bodyDef;
-	bodyDef.type = b2_dynamicBody;
-	b2Body* body = world.CreateBody(&bodyDef);
-	
-	body->SetLinearDamping( 10.0 );
-	body->SetAngularDamping( 10.0 );
-	body->SetTransform( b2Vec2( WORLDWIDTH * drand48(), 
-				    WORLDHEIGHT * drand48()),
-			    0 );	    	    
-	
-	body->CreateFixture(&fixtureDef);
-	
-	
-	bodies.push_back( body );
-      }
-    
-    
-    /* Make the window's context current */
-    glfwMakeContextCurrent(window);
-    
-    glEnable (GL_BLEND);
-    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // scale the drawing to fit the whole world in the window, origin
-    // at bottom left
-    glScalef( 2.0 / WORLDWIDTH, 2.0 / WORLDHEIGHT, 1.0 );
-    glTranslatef( -WORLDWIDTH/2.0, -WORLDHEIGHT/2.0, 0 );
-
-    // get mouse/pointer events
-    //glfwSetCursorPosCallback( window, checkmouse );
-
-    // get key events
-    glfwSetKeyCallback (window, key_callback);
-    
-    int draw_interval = DRAW_SKIP;
-    
-    // // initialize all controllers
-    // for( int i=0; i<ROBOTS; i++ )
-    //   robots[i]->Init();
-
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window))
-      {
-	for( int i=0; i<ROBOTS; i++ )
-	  robots[i]->Update( timeStep );
-	
-	if( --draw_interval < 1 )
-	  {	    
-	    UpdateGui( window, robots, bodies );
-	    draw_interval = DRAW_SKIP;
-	  }
-
-	if( ! gui_paused )
-	  {
-	    // Instruct the world to perform a single step of simulation.
-	    // It is generally best to keep the time step and iterations fixed.
-	    world.Step(timeStep, velocityIterations, positionIterations);	
-
-	    if( gui_step )
-	      gui_paused = true;
-	  }
-	else
-	  usleep(1000);
-      }
-    
-    glfwTerminate();
-    return 0;
+  return 0;
 }
