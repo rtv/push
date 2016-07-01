@@ -359,13 +359,17 @@ int main( int argc, char* argv[] )
   groundBody[1]->SetTransform( b2Vec2( WORLDWIDTH/2,WORLDHEIGHT ), 0 );    
   groundBody[2]->SetTransform( b2Vec2( 0, WORLDHEIGHT/2 ), M_PI/2.0 );    
   groundBody[3]->SetTransform( b2Vec2( WORLDWIDTH, WORLDHEIGHT/2 ), M_PI/2.0 );    
+
   std::vector<Robot*> robots;
   for( int i=0; i<ROBOTS; i++ )
-    robots.push_back( new Robot( world, 
-				 drand48() * WORLDWIDTH, 
-				 drand48() * WORLDHEIGHT, 
-				 -M_PI + drand48() * 2.0 * M_PI ));
-  
+    {
+      robots.push_back( new Robot( world, 
+				   drand48() * WORLDWIDTH, 
+				   drand48() * WORLDHEIGHT, 
+				   -M_PI + drand48() * 2.0 * M_PI ));
+      
+      robots.back()->AddController( new DemoPusher() );
+    }
   
   // Define another box shape for our dynamic body.
   b2PolygonShape dynamicBox;
@@ -417,6 +421,10 @@ int main( int argc, char* argv[] )
     
     int draw_interval = DRAW_SKIP;
     
+    // initialize all controllers
+    for( int i=0; i<ROBOTS; i++ )
+      robots[i]->Init();
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
       {

@@ -2,12 +2,6 @@
 
 #include "robot.hh"
 
-// static members
-const float Robot::PUSH = 10.0; // seconds
-const float Robot::BACKUP = 0.5;
-const float Robot::TURNMAX = 3.0;
-const float Robot::SPEEDX = 0.5;
-const float Robot::SPEEDA = M_PI/2.0;
 
 std::vector<Light> Robot::lights(2);
 
@@ -15,13 +9,6 @@ float Robot::SIZE = 0.15;
 
 // constructor
 Robot::Robot( b2World& world, const float x, const float y, const float a ) : 
-  timeleft( drand48() * TURNMAX ),
-  //pushTime( PUSH ),
-  //backupTime( BACKUP ),
-  //turnTime( drand48() * TURNMAX ),
-  state( S_TURN ), // choose start state at random
-  speedx( 0 ),
-  speeda( 0 ),
   body( NULL ),
   joint( NULL )
 {
@@ -88,13 +75,10 @@ Robot::Robot( b2World& world, const float x, const float y, const float a ) :
   //bodies[0]->SetAngularDamping( 10.0 );
 }
 
-// called once per simulation step, of duration timestep seconds
-void Robot::Update( float timestep )
+float Robot::GetLightIntensity( void )
 {
-  // light intensity triggers push
   b2Vec2 here = body->GetWorldCenter();
-
-
+  
   // integrate brightness over all light sources
   float brightness = 0.0;
   for( std::vector<Light>::iterator it = Robot::lights.begin(); 
@@ -107,65 +91,36 @@ void Robot::Update( float timestep )
       
       brightness += it->intensity / distanceToLightSqrd;
     }
-      //std::cout << "brightness: " << brightness << std::endl;
 
-  // implement the robot behaviour with a little state machine
-
-  switch( state )
-    {
-    case S_PUSH: // push
-      
-      if( brightness > 0.5 || joint->GetJointTranslation() < 0.01 )
-	{
-	  timeleft = 0; // end pushing right now      
-	}
-      
-      //timeleftpushTime -= timestep;
-      //std::cout << "Pushing " << pushTime << std::endl;
-      if( timeleft <= 0 )
-	{
-	  state = S_BACKUP;
-	  timeleft = BACKUP;
-	  //pushTime = PUSH;
-	  speedx = -SPEEDX;
-	  speeda = 0;	    
-	}
-      break;
-      
-    case S_BACKUP: // backup
-      //backupTime -= timestep;
-      //std::cout << "Backup " << backupTime << std::endl;
-      if( timeleft <= 0 )
-	{
-	  state = S_TURN;
-	  timeleft = drand48() * TURNMAX;
-	  speedx = 0;
-	  speeda = SPEEDA;	    
-	  //backupTime = BACKUP;
-	}
-      break;
-      
-    case S_TURN: // turn
-
-      //std::cout << "Turning " << turnTime << std::endl;
-      if( timeleft <= 0 )
-	{
-	  state = S_PUSH;
-	  //turnTime = drand48() * TURNMAX;
-	  timeleft = PUSH;
-	  speedx = SPEEDX;
-	  speeda = 0;	 
-	}
-      break;
-    default:
-      std::cout << "invalid control state: " << state << std::endl;
-      exit(1);
-    }
-  
-  timeleft -= timestep;
-
-  // set body speed in body-local coordinate frame
-  body->SetLinearVelocity( body->GetWorldVector(b2Vec2( speedx, 0 )));
-  body->SetAngularVelocity( speeda );
+  return brightness;
 }
 
+bool Robot::GetBumperPressed( void )
+{
+  return( joint->GetJointTranslation() < 0.01 );
+}
+
+void Robot::Update( float timestep )
+{
+  // update all added controllers
+  for( std::vector<Ctrl*>::iterator it = ctrls.begin();
+       it != ctrls.end();
+       it++ )
+    (*it)->Update( *this, timestep );
+}
+
+void Robot::Init( void )
+{
+  // init all added controllers
+  for( std::vector<Ctrl*>::iterator it = ctrls.begin();
+       it != ctrls.end();
+       it++ )
+    (*it)->Init( *this );
+}
+
+// set body speed in body-local coordinate frame
+void Robot::SetSpeed( float x, float y, float a )
+{  
+  body->SetLinearVelocity( body->GetWorldVector(b2Vec2( x, y )));
+  body->SetAngularVelocity( a );
+}
