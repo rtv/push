@@ -1,5 +1,14 @@
 #include <Box2D/Box2D.h>
 
+#include <vector>
+
+class Light {
+public:
+ float intensity; // 0..1
+  float radius; // meters square
+  float x, y; // location
+};
+
 class Robot
 {
 public:
@@ -14,12 +23,14 @@ public:
 
   static const float PUSH, BACKUP, TURNMAX;
   static const float SPEEDX, SPEEDA;
-
   static float SIZE;
+
+  static std::vector<Light> lights;
 
   float pushTime, backupTime, turnTime;
   control_state_t state;
   float speedx, speeda;
+  
   b2Body *body, *bumper;
   b2PrismaticJoint* joint;
   
@@ -27,3 +38,4 @@ public:
   
   void Update( float timestep );
 };
+

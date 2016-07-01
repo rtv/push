@@ -4,10 +4,12 @@
 
 // static members
 const float Robot::PUSH = 10.0; // seconds
-const float Robot::BACKUP = 1.0;
-const float Robot::TURNMAX = 4.0;
+const float Robot::BACKUP = 0.5;
+const float Robot::TURNMAX = 3.0;
 const float Robot::SPEEDX = 0.5;
 const float Robot::SPEEDA = M_PI/2.0;
+
+std::vector<Light> Robot::lights(2);
 
 float Robot::SIZE = 0.15;
 
@@ -22,6 +24,15 @@ Robot::Robot( b2World& world, const float x, const float y, const float a ) :
   body( NULL ),
   joint( NULL )
 {
+  lights[0].x = 2;
+  lights[0].y = 2;
+  lights[0].intensity = 0.7;
+
+  lights[1].x = 5;
+  lights[1].y = 5;
+  lights[1].intensity = 0.8;
+
+  
   b2BodyDef bodyDef;
   bodyDef.type = b2_dynamicBody;
 
@@ -79,14 +90,30 @@ Robot::Robot( b2World& world, const float x, const float y, const float a ) :
 // called once per simulation step, of duration timestep seconds
 void Robot::Update( float timestep )
 {
-  // get the bumper state
+  // light intensity triggers push
+  b2Vec2 here = body->GetWorldCenter();
+
+
+  // integrate brightness over all light sources
+  float brightness = 0.0;
+  for( std::vector<Light>::iterator it = Robot::lights.begin(); 
+       it != Robot::lights.end(); 
+       it++ )
+    {
+      float distanceToLightSqrd = 
+	pow( here.x - it->x, 2.0 ) + 
+	pow( here.y - it->y, 2.0 );
+      
+      brightness += it->intensity / distanceToLightSqrd;
+    }
+      //std::cout << "brightness: " << brightness << std::endl;
 
   // implement the robot behaviour with a little state machine
   switch( state )
     {
     case S_PUSH: // push
       
-      if( joint->GetJointTranslation() < 0.01 )
+      if( brightness > 0.5 || joint->GetJointTranslation() < 0.01 )
 	{
 	  pushTime = 0; // end pushing right now      
 	}

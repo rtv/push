@@ -167,6 +167,38 @@ void DrawBody( b2Body* b, const float color[3] )
     }
 }
 
+
+void DrawDisk(float cx, float cy, float r ) 
+{ 
+  const int num_segments = 32.0 * sqrtf( r );
+  
+  const float theta = 2 * M_PI / float(num_segments); 
+  const float c = cosf(theta);//precalculate the sine and cosine
+  const float s = sinf(theta);
+  float t;
+  
+  float x = r; //we start at angle = 0 
+  float y = 0; 
+  
+  //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+  glBegin(GL_TRIANGLE_STRIP); 
+  for(int ii = 0; ii < num_segments; ii++) 
+    { 
+      glVertex2f( x + cx, y + cy);//output vertex 
+      glVertex2f( cx, cy );//output vertex 
+      
+      //apply the rotation matrix
+      t = x;
+      x = c * x - s * y;
+      y = s * t + c * y;
+    } 
+
+  glVertex2f( r + cx, 0 + cy); // first point again to close disk
+
+  glEnd(); 
+}
+
+
 void UpdateGui( GLFWwindow* window,
 		const std::vector<Robot*>& robots, 
 		const std::vector<b2Body*>& bodies ) 
@@ -208,6 +240,15 @@ void UpdateGui( GLFWwindow* window,
   glVertex2f( 0,0 );
   glVertex2f( 0,WORLDHEIGHT );
   glEnd();
+  
+  // draw the light sources  
+  glColor4f( 1,1,0,0.2 );
+  for( std::vector<Light>::iterator it = Robot::lights.begin(); 
+       it != Robot::lights.end(); 
+       it++ )
+    {
+      DrawDisk( it->x, it->x, sqrt( it->intensity ) );
+    }
   
   /* Swap front and back buffers */
   glfwSwapBuffers(window);
@@ -360,6 +401,9 @@ int main( int argc, char* argv[] )
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
     
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // scale the drawing to fit the whole world in the window, origin
     // at bottom left
     glScalef( 2.0 / WORLDWIDTH, 2.0 / WORLDHEIGHT, 1.0 );
