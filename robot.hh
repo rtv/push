@@ -27,7 +27,8 @@ public:
 
   static std::vector<Light> lights;
 
-  float pushTime, backupTime, turnTime;
+  //float pushTime, backupTime, turnTime;
+  float timeleft;
   control_state_t state;
   float speedx, speeda;
   

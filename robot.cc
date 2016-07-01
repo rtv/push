@@ -15,10 +15,11 @@ float Robot::SIZE = 0.15;
 
 // constructor
 Robot::Robot( b2World& world, const float x, const float y, const float a ) : 
-  pushTime( PUSH ),
-  backupTime( BACKUP ),
-  turnTime( drand48() * TURNMAX ),
-  state( (control_state_t)(random() % S_COUNT) ), // choose start state at random
+  timeleft( drand48() * TURNMAX ),
+  //pushTime( PUSH ),
+  //backupTime( BACKUP ),
+  //turnTime( drand48() * TURNMAX ),
+  state( S_TURN ), // choose start state at random
   speedx( 0 ),
   speeda( 0 ),
   body( NULL ),
@@ -109,47 +110,51 @@ void Robot::Update( float timestep )
       //std::cout << "brightness: " << brightness << std::endl;
 
   // implement the robot behaviour with a little state machine
+
   switch( state )
     {
     case S_PUSH: // push
       
       if( brightness > 0.5 || joint->GetJointTranslation() < 0.01 )
 	{
-	  pushTime = 0; // end pushing right now      
+	  timeleft = 0; // end pushing right now      
 	}
       
-      speedx = SPEEDX;
-      speeda = 0;	 
-      pushTime -= timestep;
+      //timeleftpushTime -= timestep;
       //std::cout << "Pushing " << pushTime << std::endl;
-      if( pushTime <= 0 )
+      if( timeleft <= 0 )
 	{
 	  state = S_BACKUP;
-	  pushTime = PUSH;
+	  timeleft = BACKUP;
+	  //pushTime = PUSH;
+	  speedx = -SPEEDX;
+	  speeda = 0;	    
 	}
       break;
       
     case S_BACKUP: // backup
-      speedx = -SPEEDX;
-      speeda = 0;	    
-      backupTime -= timestep;
+      //backupTime -= timestep;
       //std::cout << "Backup " << backupTime << std::endl;
-      if( backupTime <= 0 )
+      if( timeleft <= 0 )
 	{
 	  state = S_TURN;
-	  backupTime = BACKUP;
+	  timeleft = drand48() * TURNMAX;
+	  speedx = 0;
+	  speeda = SPEEDA;	    
+	  //backupTime = BACKUP;
 	}
       break;
       
     case S_TURN: // turn
-      speedx = 0;
-      speeda = SPEEDA;	    
-      turnTime -= timestep;
+
       //std::cout << "Turning " << turnTime << std::endl;
-      if( turnTime <= 0 )
+      if( timeleft <= 0 )
 	{
 	  state = S_PUSH;
-	  turnTime = drand48() * TURNMAX;
+	  //turnTime = drand48() * TURNMAX;
+	  timeleft = PUSH;
+	  speedx = SPEEDX;
+	  speeda = 0;	 
 	}
       break;
     default:
@@ -157,6 +162,7 @@ void Robot::Update( float timestep )
       exit(1);
     }
   
+  timeleft -= timestep;
 
   // set body speed in body-local coordinate frame
   body->SetLinearVelocity( body->GetWorldVector(b2Vec2( speedx, 0 )));
