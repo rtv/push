@@ -1,8 +1,8 @@
 CCFLAGS = -g -O3 -I /usr/local/include -framework OpenGL
 LDFLAGS = -L/usr/local/lib -l glfw3 -lbox2d
 
-SRC = main.cc robot.cc gui.cc
-HDR = robot.hh
+SRC = main.cc push.cc
+HDR = push.hh
 
 all: push
 
