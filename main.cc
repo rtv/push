@@ -156,7 +156,7 @@ int main( int argc, char* argv[] )
   
   std::vector<Box*> boxes;    
   for( int i=0; i<BOXES; i++ )
-    boxes.push_back( new Box( world ) );
+    boxes.push_back( new Box( world, Box::SHAPE_HEX ) );
   
   std::vector<Robot*> robots;
   for( int i=0; i<ROBOTS; i++ )

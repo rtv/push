@@ -80,14 +80,40 @@ class Box
 public:
   static float size;
 
+  typedef enum {
+    SHAPE_RECT=0,
+    SHAPE_HEX
+  } box_shape_t;
+
   b2Body* body;
 
-  Box( World& world )
+  Box( World& world, box_shape_t shape )
     : body(NULL)
   {
     b2PolygonShape dynamicBox;
-    dynamicBox.SetAsBox( size/2.0, size/2.0 );
-    
+
+    switch( shape )
+      {
+      case SHAPE_RECT:
+	dynamicBox.SetAsBox( size/2.0, size/2.0 );
+	break;
+      case SHAPE_HEX:
+	{
+	  b2Vec2 verts[6];
+
+	  for (int i = 0; i < 6; i++) {
+	    verts[i].x = size/2.0 * cos(2.0 * M_PI * i / 6.0);
+	    verts[i].y = size/2.0 * sin(2.0 * M_PI * i / 6.0);
+	  }
+	
+	dynamicBox.Set(verts,6);
+	}
+	break;
+      default:
+	std::cout << "invalid shape number " << shape << std::endl;
+	break;
+      }
+
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &dynamicBox;
     fixtureDef.density = 5;
@@ -107,6 +133,7 @@ public:
     body->CreateFixture(&fixtureDef);
   }
 };
+
 
 class GuiWorld : public World
 {
