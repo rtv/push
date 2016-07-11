@@ -117,7 +117,7 @@ int main( int argc, char* argv[] )
   };
   
   int ch=0, optindex=0;  
-  while ((ch = getopt_long(argc, argv, "r:b:s:z:", longopts, &optindex)) != -1)
+  while ((ch = getopt_long(argc, argv, "w:h:r:b:s:z:", longopts, &optindex)) != -1)
     {
       switch( ch )
 	{
@@ -126,6 +126,13 @@ int main( int argc, char* argv[] )
           if (optarg)
             printf (" with arg %s", optarg);
           printf ("\n");
+	  break;
+
+	case 'w':
+	  WIDTH = atof( optarg );
+	  break;
+	case 'h':
+	  HEIGHT = atof( optarg );
 	  break;
 
 	case 'r':
