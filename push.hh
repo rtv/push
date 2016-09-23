@@ -3,6 +3,13 @@
 
 #include <vector>
 
+enum _entityCategory {
+  BOXBOUNDARY = 0x1,
+  ROBOTBOUNDARY = 0x2,
+  ROBOT = 0x4,
+  BOX = 0x8
+};
+
 class Robot;
 
 class Light {
@@ -18,27 +25,61 @@ public:
   
   b2World* b2world;
   float width, height;
-  
+
+  b2Body* boxWall[4];
+  b2Body* robotWall[4];
+    
   World( float width, float height ) :
     width(width),
     height(height),
     b2world( new b2World( b2Vec2( 0,0 ))) // gravity 
   {
-    b2BodyDef groundBodyDef;
+    // set interior box container
+    b2BodyDef boxWallDef;
     b2PolygonShape groundBox;
-    groundBox.SetAsBox( width/2.0, 0.01f );    
+    groundBox.SetAsBox( width/3.0, 0.01f );    
     
-    b2Body* groundBody[4];
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &groundBox;    
+    
+    // prevent collision with puck-retaining strings 
+    fixtureDef.filter.categoryBits = BOXBOUNDARY;
+    fixtureDef.filter.maskBits = BOX; // contain only boxes
+  
     for( int i=0; i<4; i++ )
       {
-	groundBody[i] = b2world->CreateBody(&groundBodyDef);	
-	groundBody[i]->CreateFixture(&groundBox, 0.0f);
+	boxWall[i] = b2world->CreateBody(&boxWallDef);	
+	boxWall[i]->CreateFixture(&fixtureDef );
       }
     
-    groundBody[0]->SetTransform( b2Vec2( width/2,0 ), 0 );    
-    groundBody[1]->SetTransform( b2Vec2( width/2,height ), 0 );    
-    groundBody[2]->SetTransform( b2Vec2( 0, height/2 ), M_PI/2.0 );    
-    groundBody[3]->SetTransform( b2Vec2( width, height/2 ), M_PI/2.0 );    
+    boxWall[0]->SetTransform( b2Vec2( width/2, height/6.0 ), 0 );    
+    boxWall[1]->SetTransform( b2Vec2( width/2, height-height/6.0 ), 0 );    
+    boxWall[2]->SetTransform( b2Vec2( width/6.0, height/2 ), M_PI/2.0 );    
+    boxWall[3]->SetTransform( b2Vec2( width-width/6.0, height/2 ), M_PI/2.0 );
+
+
+    // set exterior box container
+    b2BodyDef boxWallDef1;
+    b2PolygonShape groundBox1;
+    groundBox1.SetAsBox( width, 0.01f );    
+    
+    b2FixtureDef fixtureDef1;
+    fixtureDef1.shape = &groundBox1;    
+    
+    // prevent collision with puck-retaining strings 
+    fixtureDef1.filter.categoryBits = ROBOTBOUNDARY;
+    fixtureDef1.filter.maskBits = ROBOT | BOX; // contain everthing
+  
+    for( int i=0; i<4; i++ )
+      {
+	robotWall[i] = b2world->CreateBody(&boxWallDef1);	
+	robotWall[i]->CreateFixture(&fixtureDef1 );
+      }
+    
+    robotWall[0]->SetTransform( b2Vec2( width/2,0 ), 0 );    
+    robotWall[1]->SetTransform( b2Vec2( width/2,height ), 0 );    
+    robotWall[2]->SetTransform( b2Vec2( 0, height/2 ), M_PI/2.0 );    
+    robotWall[3]->SetTransform( b2Vec2( width, height/2 ), M_PI/2.0 ); 
   }
 
   void Step( float timestep )
@@ -120,15 +161,21 @@ public:
     fixtureDef.friction = 1.0;
     fixtureDef.restitution = 0.1;
 
+    fixtureDef.filter.categoryBits = BOX;
+    fixtureDef.filter.maskBits = 0xFFFF; //everything
+      // BOX | ROBOT | BOXBOUNDARY | ROBOTBOUNDARY; // everything
+     
     b2BodyDef bodyDef;
     bodyDef.type = b2_dynamicBody;
     
     body = world.b2world->CreateBody(&bodyDef);    
     body->SetLinearDamping( 10.0 );
     body->SetAngularDamping( 10.0 );
-    body->SetTransform( b2Vec2( world.width * drand48(), 
-				world.height * drand48()),
-			0 );	    	    
+    body->SetTransform( b2Vec2( world.width/2 +
+				1.9/3.0 * world.width*(drand48()-0.5), 
+				world.height/2 +
+				1.9/3.0 * world.height*(drand48()-0.5)),
+				0 );	    	    
       
     body->CreateFixture(&fixtureDef);
   }

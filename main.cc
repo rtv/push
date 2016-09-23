@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <getopt.h>
 #include <unistd.h> // for usleep(3)
 
@@ -100,9 +101,9 @@ const float Pusher::maxspeeda = M_PI/2.0;
 
 int main( int argc, char* argv[] )
 {
-  float WIDTH = 8;
-  float HEIGHT = 8;
-  size_t ROBOTS = 16;
+  float WIDTH = 12;
+  float HEIGHT = 12;
+  size_t ROBOTS = 32;
   size_t BOXES = 128;
   float32 timeStep = 1.0 / 30.0;
 

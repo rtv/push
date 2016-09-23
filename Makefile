@@ -4,7 +4,8 @@
 
 # Linux
 CCFLAGS = -g -O3 `pkg-config --cflags glfw3 box2d`
-LDFLAGS = `pkg-config --libs glfw3 box2d` -lGL
+# LDFLAGS = `pkg-config --static --libs x11 xrandr xi xxf86vm glfw3 box2d` -lGL
+LDFLAGS = `pkg-config --static --libs glfw3 box2d` -lGL
 
 
 SRC = main.cc push.cc

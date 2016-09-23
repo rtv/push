@@ -7,6 +7,7 @@ std::vector<Light> Robot::lights(2);
 float Box::size = 0.32;
 float Robot::size = 0.3;
 
+
 // constructor
   Robot::Robot( World& world, const float x, const float y, const float a ) : 
   body( NULL ),
@@ -48,6 +49,11 @@ float Robot::size = 0.3;
   fixtureDef.shape = &dynamicBox;    
   fixtureDef.density = 10;
   fixtureDef.friction = 1.0;
+
+  // prevent collision with puck-retaining strings 
+  fixtureDef.filter.categoryBits = ROBOT;
+  fixtureDef.filter.maskBits = ROBOT | BOX | ROBOTBOUNDARY; // not box boundary
+  
   body->CreateFixture(&fixtureDef);
   
   // bumper has same settings the body but different size
@@ -304,6 +310,14 @@ void GuiWorld::Step( float timestep,
 
       glClearColor( 0.8, 0.8, 0.8, 1.0 ); 
       glClear(GL_COLOR_BUFFER_BIT);	
+
+      // draw the walls
+      for( int i=0; i<4; i++ )
+	DrawBody( boxWall[i], c_gray );
+
+      for( int i=0; i<4; i++ )
+	DrawBody( robotWall[i], c_gray );
+
       
       for( int i=0; i<bodies.size(); i++ )
 	DrawBody( bodies[i]->body, c_gray );
