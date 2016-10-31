@@ -29,11 +29,14 @@ private:
 public:
   
   // constructor
-  Pusher( World& world ) : 
+  Pusher( World& world, float size ) : 
     Robot( world, 
 	   drand48() * world.width, // random location
 	   drand48() * world.height, 
-	   -M_PI + drand48() * 2.0*M_PI ), 
+	   -M_PI + drand48() * 2.0*M_PI,
+	   size,
+	   100,
+	   100 ), 
     state( S_TURN ),
     timeleft( drand48() * TURNMAX ),
     speedx( 0 ),
@@ -50,7 +53,7 @@ public:
     
     // if we are pushing and the bump switch goes off or the light is
     // too bright, force a change of control state
-    if( state == S_PUSH && ( GetLightIntensity() > 0.5 || GetBumperPressed() ) )
+    if( state == S_PUSH && ( GetLightIntensity() > 1.0 || GetBumperPressed() ) )
       {
 	timeleft = 0.0; // end pushing right now
       }
@@ -85,11 +88,19 @@ public:
 	}
     
     SetSpeed( speedx, 0, speeda );
+    
+    // if low on power but charging, stop moving
+    //if( charge < charge_max/5.0 && charge_delta > 0 )
+    //  SetSpeed( 0,0,0 );
+
+    Robot::Update( timestep ); // inherit underlying behaviour to handle charge/discharge
+
+
   }
 }; // class Pusher
 
 // static members
-const float Pusher::PUSH = 10.0; // seconds
+const float Pusher::PUSH = 15.0; // seconds
 const float Pusher::BACKUP = 0.5;
 const float Pusher::TURNMAX = 2.0;
 const float Pusher::SPEEDX = 0.5;
@@ -100,11 +111,14 @@ const float Pusher::maxspeeda = M_PI/2.0;
 
 int main( int argc, char* argv[] )
 {
-  float WIDTH = 8;
-  float HEIGHT = 8;
-  size_t ROBOTS = 16;
-  size_t BOXES = 128;
-  float32 timeStep = 1.0 / 30.0;
+  float WIDTH = 16;
+  float HEIGHT = 16;
+  size_t ROBOTS = 64;
+  size_t BOXES = 512;
+  size_t LIGHTS = 256;
+  float timeStep = 1.0 / 30.0;
+  float robot_size = 0.4;
+  float box_size = 0.3;
 
   /* options descriptor */
   static struct option longopts[] = {
@@ -127,14 +141,12 @@ int main( int argc, char* argv[] )
             printf (" with arg %s", optarg);
           printf ("\n");
 	  break;
-
 	case 'w':
 	  WIDTH = atof( optarg );
 	  break;
 	case 'h':
 	  HEIGHT = atof( optarg );
 	  break;
-
 	case 'r':
 	  ROBOTS = atoi( optarg );
 	  break;
@@ -142,10 +154,10 @@ int main( int argc, char* argv[] )
 	  BOXES = atoi( optarg );
 	  break;
 	case 'z':
-	  Robot::size = atof( optarg );
+	  robot_size = atof( optarg );
 	  break;
 	case 's':
-	  Box::size = atof( optarg );
+	  box_size = atof( optarg );
 	  break;
 	// case 'h':  
 	// case '?':  
@@ -161,22 +173,38 @@ int main( int argc, char* argv[] )
   
   GuiWorld world( WIDTH, HEIGHT );
   
-  std::vector<Box*> boxes;    
   for( int i=0; i<BOXES; i++ )
-    boxes.push_back( new Box( world, Box::SHAPE_HEX ) );
+    world.AddBox( new Box( world, Box::SHAPE_HEX, box_size ) );
   
-  std::vector<Robot*> robots;
   for( int i=0; i<ROBOTS; i++ )
-    robots.push_back( new Pusher( world ) );
-    
+    world.AddRobot( new Pusher( world, robot_size ) );
+
+  // fill the world with a grid of lights, all off
+  world.AddLightGrid( sqrt(LIGHTS), sqrt(LIGHTS), 2.0, 0.0 );
+  
   /* Loop until the user closes the window */
   while( !world.RequestShutdown() )
     {
-      // if( ! GuiWorld::paused )
-      for( int i=0; i<ROBOTS; i++ )
-	robots[i]->Update( timeStep );
-      
-      world.Step( timeStep, robots, boxes );
+      if( world.steps % 5000 == 1 ) // every now and again
+	{ 
+	  // turn on a random fraction of the lights
+	  for( int i=0; i<LIGHTS; i++ )
+	    world.SetLightIntensity( i, drand48()>0.7 ? 1.0 : 0 );
+
+	  // // turn on the lights around the edge
+	  // for( int x=0; x<sqrt(LIGHTS); x++ )
+	  //   {
+	  //     world.SetLightIntensity( x, 1 );	  
+	  //     world.SetLightIntensity( LIGHTS-x-1, 1 );	  
+	  //   }
+	  // for( int y=0; y<sqrt(LIGHTS); y++ )
+	  //   {
+	  //     world.SetLightIntensity( y*sqrt(LIGHTS), 1 );	  
+	  //     world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 1 );	  
+	  //   }
+	}
+
+      world.Step( timeStep );	  
     }
   
   return 0;

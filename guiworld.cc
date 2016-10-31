@@ -2,127 +2,15 @@
 
 #include "push.hh"
 
-std::vector<Light> Robot::lights(2);
-
-float Box::size = 0.32;
-float Robot::size = 0.3;
-
-// constructor
-  Robot::Robot( World& world, const float x, const float y, const float a ) : 
-  body( NULL ),
-  joint( NULL )
-{
-  lights[0].x = 3;
-  lights[0].y = 4;
-  lights[0].intensity = 0.6;
-
-  lights[1].x = 6;
-  lights[1].y = 5;
-  lights[1].intensity = 0.8;
-
-  // lights[2].x = 4;
-  // lights[2].y = 2;
-  // lights[2].intensity = 0.6;
-
-  // lights[3].x = 5;
-  // lights[3].y = 2;
-  // lights[3].intensity = 0.6;
-
-  // lights[4].x = 5;
-  // lights[4].y = 5;
-  // lights[4].intensity = 0.6;
-
-  // lights[5].x = 6;
-  // lights[5].y = 6;
-  // lights[5].intensity = 0.6;
-
-  b2BodyDef bodyDef;
-  bodyDef.type = b2_dynamicBody;
-  body = world.b2world->CreateBody(&bodyDef);
-  bumper = world.b2world->CreateBody(&bodyDef);
-  
-  b2PolygonShape dynamicBox;
-  dynamicBox.SetAsBox( size/2.0, size/2.0 );
-  
-  b2FixtureDef fixtureDef;
-  fixtureDef.shape = &dynamicBox;    
-  fixtureDef.density = 10;
-  fixtureDef.friction = 1.0;
-  body->CreateFixture(&fixtureDef);
-  
-  // bumper has same settings the body but different size
-  dynamicBox.SetAsBox( size/10.0, size/2.0 );
-  bumper->CreateFixture(&fixtureDef);
-
-  
-  b2PrismaticJointDef jointDef;
-  
-  jointDef.Initialize( body, 
-		       bumper, 
-		       body->GetWorldCenter(), 
-		       b2Vec2( 1.0f, 0.0f )
-		       ); 
-  
-  jointDef.lowerTranslation = 0;//-0.2;
-  jointDef.upperTranslation = 0.04f;
-  jointDef.enableLimit = true;
-  jointDef.maxMotorForce = 0.8f;
-  jointDef.motorSpeed = 1.0f;
-  jointDef.localAnchorA.Set( size/2.0, 0); // on the nose
-  jointDef.localAnchorB.Set( 0,0 );
-  
-  jointDef.enableMotor = true;
-  //jointDef.collideConnected = true;
-  
-  joint = (b2PrismaticJoint*)world.b2world->CreateJoint( &jointDef );
-
-  // place assembled robot in the world
-  body->SetTransform( b2Vec2( x, y ), a );	
-  bumper->SetTransform( body->GetWorldPoint( b2Vec2( size/2,0) ), a );	
-}
-
-float Robot::GetLightIntensity( void )
-{
-  b2Vec2 here = body->GetWorldCenter();
-  
-  // integrate brightness over all light sources
-  float brightness = 0.0;
-  for( std::vector<Light>::iterator it = Robot::lights.begin(); 
-       it != Robot::lights.end(); 
-       it++ )
-    {
-      const float distanceToLightSqrd = 
-	pow( here.x - it->x, 2.0 ) + 
-	pow( here.y - it->y, 2.0 );
-      
-      brightness += it->intensity / distanceToLightSqrd;
-    }
-
-  return brightness;
-}
-
-bool Robot::GetBumperPressed( void )
-{
-  return( joint->GetJointTranslation() < 0.01 );
-}
-
-// set body speed in body-local coordinate frame
-void Robot::SetSpeed( float x, float y, float a )
-{  
-  body->SetLinearVelocity( body->GetWorldVector(b2Vec2( x, y )));
-  body->SetAngularVelocity( a );
-}
-
-
 const float c_yellow[3] = {1.0, 1.0, 0.0 };
 const float c_red[3] = {1.0, 0.0, 0.0 };
 const float c_darkred[3] = {0.8, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
 const float c_gray[3] = { 0.9, 0.9, 1.0 };
 
-bool GuiWorld::paused = true;
+bool GuiWorld::paused = false;
 bool GuiWorld::step = false;
-int GuiWorld::skip = 1;
+int GuiWorld::skip = 10;
 
 
 // void checkmouse( GLFWwindow* win, double x, double y) 
@@ -228,12 +116,11 @@ void DrawDisk(float cx, float cy, float r )
   float x = r; //we start at angle = 0 
   float y = 0; 
   
-  //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
   glBegin(GL_TRIANGLE_STRIP); 
   for(int ii = 0; ii < num_segments; ii++) 
     { 
-      glVertex2f( x + cx, y + cy);//output vertex 
-      glVertex2f( cx, cy );//output vertex 
+      glVertex2f( x + cx, y + cy);
+      glVertex2f( cx, cy );
       
       //apply the rotation matrix
       t = x;
@@ -286,16 +173,14 @@ GuiWorld::GuiWorld( float width, float height ) :
     glfwSetKeyCallback (window, key_callback);
 }
 
-void GuiWorld::Step( float timestep, 
-		const std::vector<Robot*>& robots, 
-		const std::vector<Box*>& bodies ) 
+void GuiWorld::Step( float timestep )
 {
   if( !paused || step)
     {
       World::Step( timestep );
 
       step = false;
-      //	paused = true;
+      // paused = true;
     }
 
   if( --draw_interval < 1 )
@@ -305,13 +190,19 @@ void GuiWorld::Step( float timestep,
       glClearColor( 0.8, 0.8, 0.8, 1.0 ); 
       glClear(GL_COLOR_BUFFER_BIT);	
       
-      for( int i=0; i<bodies.size(); i++ )
-	DrawBody( bodies[i]->body, c_gray );
       
-      for( int i=0; i<robots.size(); i++ )
+      for( auto& b : boxes )
+	DrawBody( b->body, c_gray );
+      
+      for( auto& r : robots )
 	{
-	  DrawBody( robots[i]->body, c_red );
-	  DrawBody( robots[i]->bumper, c_darkred );
+	  float col[3];
+	  col[0] = (r->charge_max - r->charge) / r->charge_max;
+	  col[1] = r->charge / r->charge_max;
+	  col[2] = 0;
+
+	  DrawBody( r->body, col );
+	  DrawBody( r->bumper, c_darkred );
 	}
       
       // draw a nose on the robot
@@ -319,17 +210,18 @@ void GuiWorld::Step( float timestep,
       glPointSize( 12 );
       glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
       glBegin( GL_TRIANGLES );
-      for( int i=0; i<robots.size(); i++ )
+
+      for( auto& r : robots )
 	{      
-	  const b2Transform& t = robots[i]->body->GetTransform();
+	  const b2Transform& t = r->body->GetTransform();
 	  const float a = t.q.GetAngle();
 	  
-	  glVertex2f( t.p.x + Robot::size/2.0 * cos(a),
-		      t.p.y + Robot::size/2.0 * sin(a) );		  
-	  glVertex2f( t.p.x + Robot::size/3.0 * cos(a+0.5),
-		      t.p.y + Robot::size/3.0 * sin(a+0.5) );		  
-	  glVertex2f( t.p.x + Robot::size/3.0 * cos(a-0.5),
-		      t.p.y + Robot::size/3.0 * sin(a-0.5) );		  
+	  glVertex2f( t.p.x + r->size/2.0 * cos(a),
+		      t.p.y + r->size/2.0 * sin(a) );		  
+	  glVertex2f( t.p.x + r->size/3.0 * cos(a+0.5),
+		      t.p.y + r->size/3.0 * sin(a+0.5) );		  
+	  glVertex2f( t.p.x + r->size/3.0 * cos(a-0.5),
+		      t.p.y + r->size/3.0 * sin(a-0.5) );		  
 	}
       glEnd();
       
@@ -341,14 +233,53 @@ void GuiWorld::Step( float timestep,
       glEnd();
       
       // draw the light sources  
-      glColor4f( 1,1,0,0.2 );
-      for( std::vector<Light>::iterator it = Robot::lights.begin(); 
-	   it != Robot::lights.end(); 
-	   it++ )
+      for( const auto& l : lights )
+       	{	
+	  glColor4f( 1,1,0,l->intensity  );
+       	  DrawDisk( l->x, l->y, 0.05 );
+       	}
+
+      // draw grid of light intensity
+      const size_t side = 64;      
+      float dx = width/(float)side;
+      float dy = height/(float)side;      
+      float bright[side][side];
+      
+      float max = 0;
+      for( int y=0; y<side; y++ )
 	{
-	  DrawDisk( it->x, it->y, sqrt( it->intensity ) );
+	  for( int x=0; x<side; x++ )
+	  {
+	    // find the world position at this grid location  
+	    float wx = x * dx + dx/2.0; 
+	    float wy = y * dy + dy/2.0; 
+
+	    bright[y][x] = GetLightIntensityAt( wx, wy );
+
+	    // keep track of the max for normalizatioon
+	    if( bright[y][x] > max )
+	      max = bright[y][x];
+	  }
 	}
       
+      // scale to normalize brightness
+      for( int y=0; y<side; y++ )
+	  for( int x=0; x<side; x++ )
+	    bright[y][x] /= (1.5*max); // actually a little less than full alpha
+      
+      for( int y=0; y<side; y++ )
+	for( int x=0; x<side; x++ )
+	  {
+	    // find the world position at this grid location  
+	    float wx = x * dx + dx/2.0; 
+	    float wy = y * dy + dy/2.0; 
+	    
+	    glColor4f( 1,1,0, bright[y][x] );
+	    
+	    glRectf( wx-dx/2.0, wy-dy/2.0,
+		     wx+dx/2.0, wy+dy/2.0 );
+	  }
+
       /* Swap front and back buffers */
       glfwSwapBuffers(window);
       

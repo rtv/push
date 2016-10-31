@@ -3,68 +3,97 @@
 
 #include <vector>
 
-class Robot;
-
 class Light {
 public:
- float intensity; // 0..1
-  float radius; // meters square
-  float x, y; // location
+ float intensity;
+  float x, y, z; // location (z is height above the x,y plane of the world)
+  
+  Light( float x, float y, float z, float intensity ) : 
+    x(x),y(y),z(z),intensity(intensity)
+  {}
 };
+
+
+class Robot;
+class Box;
 
 class World 
 {
-public:
-  
+public:  
   b2World* b2world;
   float width, height;
+  size_t steps;
+  std::vector<Light*> lights;
+  std::vector<Box*> boxes;    
+  std::vector<Robot*> robots;
+
+  World( float width, float height ) ;
   
-  World( float width, float height ) :
-    width(width),
-    height(height),
-    b2world( new b2World( b2Vec2( 0,0 ))) // gravity 
-  {
-    b2BodyDef groundBodyDef;
-    b2PolygonShape groundBox;
-    groundBox.SetAsBox( width/2.0, 0.01f );    
-    
-    b2Body* groundBody[4];
-    for( int i=0; i<4; i++ )
-      {
-	groundBody[i] = b2world->CreateBody(&groundBodyDef);	
-	groundBody[i]->CreateFixture(&groundBox, 0.0f);
-      }
-    
-    groundBody[0]->SetTransform( b2Vec2( width/2,0 ), 0 );    
-    groundBody[1]->SetTransform( b2Vec2( width/2,height ), 0 );    
-    groundBody[2]->SetTransform( b2Vec2( 0, height/2 ), M_PI/2.0 );    
-    groundBody[3]->SetTransform( b2Vec2( width, height/2 ), M_PI/2.0 );    
-  }
+  void AddRobot( Robot* robot );
+  void AddBox( Box* box );
+  void AddLight( Light* light );
+  void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity );
 
-  void Step( float timestep )
-  {
-    const int32 velocityIterations = 6;
-    const int32 positionIterations = 2;
+  // set the intensity of the light at @index. If @index is out of
+  // range, the call has no effect
+  void SetLightIntensity( size_t index, float intensity );
 
-    // Instruct the world to perform a single step of simulation.
-    // It is generally best to keep the time step and iterations fixed.
-    b2world->Step( timestep, velocityIterations, positionIterations);	
-  }
+  // return instantaneous light intensity from all sources
+  float GetLightIntensityAt( float x, float y );
+
+  // perform one simulation step
+  void Step( float timestep );
 };
+
+class GuiWorld : public World
+{
+public:
+  static bool paused;
+  static bool step;
+  static int skip;
+  
+  GLFWwindow* window;
+  int draw_interval;
+  
+  GuiWorld( float width, float height );
+  ~GuiWorld();
+  
+  virtual void Step( float timestep );
+  
+  bool RequestShutdown();    
+};
+
 
 class Robot
 {
 public:
-  
-  static float size;
+
+  World& world;
+  float size;
+
+  float charge; // joules
+  float charge_max; // maximum storage capacity
+  float charge_delta; // rate of change of charge
+
+  float input_efficiency; // scale input from light sources
+  float output_metabolic; // cost per step of just being alive
+  float output_efficiency; // scale output due to motion
+
   static std::vector<Light> lights;
   
   b2Body *body, *bumper;
   b2PrismaticJoint* joint;
   
-  Robot( World& world, float x, float y, float a );  
+  Robot( World& world, 
+	 float x, float y, float a,  // pose
+	 float size=0.5, 
+	 float charge=100.0, 
+	 float charge_max=100.0,
+	 float input_efficiency=0.1,
+	 float output_metabolic=0.01,
+	 float output_efficiency=0.1 );  
   
-  virtual void Update( float timestep ) = 0; // pure 
+  virtual void Update( float timestep );
 
 protected:
   // get sensor data
@@ -78,7 +107,7 @@ protected:
 class Box 
 {
 public:
-  static float size;
+  float size;
 
   typedef enum {
     SHAPE_RECT=0,
@@ -87,71 +116,7 @@ public:
 
   b2Body* body;
 
-  Box( World& world, box_shape_t shape )
-    : body(NULL)
-  {
-    b2PolygonShape dynamicBox;
-
-    switch( shape )
-      {
-      case SHAPE_RECT:
-	dynamicBox.SetAsBox( size/2.0, size/2.0 );
-	break;
-      case SHAPE_HEX:
-	{
-	  b2Vec2 verts[6];
-
-	  for (int i = 0; i < 6; i++) {
-	    verts[i].x = size/2.0 * cos(2.0 * M_PI * i / 6.0);
-	    verts[i].y = size/2.0 * sin(2.0 * M_PI * i / 6.0);
-	  }
-	
-	dynamicBox.Set(verts,6);
-	}
-	break;
-      default:
-	std::cout << "invalid shape number " << shape << std::endl;
-	break;
-      }
-
-    b2FixtureDef fixtureDef;
-    fixtureDef.shape = &dynamicBox;
-    fixtureDef.density = 5;
-    fixtureDef.friction = 1.0;
-    fixtureDef.restitution = 0.1;
-
-    b2BodyDef bodyDef;
-    bodyDef.type = b2_dynamicBody;
-    
-    body = world.b2world->CreateBody(&bodyDef);    
-    body->SetLinearDamping( 10.0 );
-    body->SetAngularDamping( 10.0 );
-    body->SetTransform( b2Vec2( world.width * drand48(), 
-				world.height * drand48()),
-			0 );	    	    
-      
-    body->CreateFixture(&fixtureDef);
-  }
+  Box( World& world, box_shape_t shape, float size );
 };
 
 
-class GuiWorld : public World
-{
-public:
-  static bool paused;
-  static bool step;
-  static int skip;
-
-  GLFWwindow* window;
-  int draw_interval;
-  
-  GuiWorld( float width, float height );
-  ~GuiWorld();
-  
-  virtual void Step( float timestep,
-		     const std::vector<Robot*>& robots, 
-		     const std::vector<Box*>& bodies );
-  
-  bool RequestShutdown();
-    
-};
