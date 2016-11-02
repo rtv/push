@@ -136,7 +136,8 @@ void DrawDisk(float cx, float cy, float r )
 GuiWorld::GuiWorld( float width, float height ) :
   World( width, height ),
   window(NULL),
-  draw_interval( skip )
+  draw_interval( skip ),
+  lights_need_redraw( true )  
   {
     srand48( time(NULL) );  
 
@@ -232,40 +233,48 @@ void GuiWorld::Step( float timestep )
       glVertex2f( 0,height );
       glEnd();
       
+      const size_t side = 64;      
+      const float dx = width/(float)side;
+      const float dy = height/(float)side;      
+      
+      if( lights_need_redraw )
+	{
+	  lights_need_redraw = false;
+
+	  // draw grid of light intensity
+	  //float bright[side][side];
+	  
+	  bright.resize( side*side );
+
+	  float max = 0;
+	  for( int y=0; y<side; y++ )
+	    {
+	      for( int x=0; x<side; x++ )
+		{
+		  // find the world position at this grid location  
+		  float wx = x * dx + dx/2.0; 
+		  float wy = y * dy + dy/2.0; 
+		  
+		  bright[y*side+x] = GetLightIntensityAt( wx, wy );
+		  
+		  // keep track of the max for normalizatioon
+		  if( bright[y*side+x] > max )
+		    max = bright[y*side+x];
+		}
+	    }
+	  
+	  // scale to normalize brightness
+	  for( int y=0; y<side; y++ )
+	    for( int x=0; x<side; x++ )
+	      bright[y*side+x] /= (1.5*max); // actually a little less than full alpha
+	}
+	  
       // draw the light sources  
       for( const auto& l : lights )
-       	{	
+	{	
 	  glColor4f( 1,1,0,l->intensity  );
-       	  DrawDisk( l->x, l->y, 0.05 );
-       	}
-
-      // draw grid of light intensity
-      const size_t side = 64;      
-      float dx = width/(float)side;
-      float dy = height/(float)side;      
-      float bright[side][side];
-      
-      float max = 0;
-      for( int y=0; y<side; y++ )
-	{
-	  for( int x=0; x<side; x++ )
-	  {
-	    // find the world position at this grid location  
-	    float wx = x * dx + dx/2.0; 
-	    float wy = y * dy + dy/2.0; 
-
-	    bright[y][x] = GetLightIntensityAt( wx, wy );
-
-	    // keep track of the max for normalizatioon
-	    if( bright[y][x] > max )
-	      max = bright[y][x];
-	  }
+	  DrawDisk( l->x, l->y, 0.05 );
 	}
-      
-      // scale to normalize brightness
-      for( int y=0; y<side; y++ )
-	  for( int x=0; x<side; x++ )
-	    bright[y][x] /= (1.5*max); // actually a little less than full alpha
       
       for( int y=0; y<side; y++ )
 	for( int x=0; x<side; x++ )
@@ -274,7 +283,7 @@ void GuiWorld::Step( float timestep )
 	    float wx = x * dx + dx/2.0; 
 	    float wy = y * dy + dy/2.0; 
 	    
-	    glColor4f( 1,1,0, bright[y][x] );
+	    glColor4f( 1,1,0, bright[y*side+x] );
 	    
 	    glRectf( wx-dx/2.0, wy-dy/2.0,
 		     wx+dx/2.0, wy+dy/2.0 );

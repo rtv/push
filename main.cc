@@ -185,7 +185,7 @@ int main( int argc, char* argv[] )
   /* Loop until the user closes the window */
   while( !world.RequestShutdown() )
     {
-      if( world.steps % 5000 == 1 ) // every now and again
+      if( world.steps % 1000 == 1 ) // every now and again
 	{ 
 	  // turn on a random fraction of the lights
 	  for( int i=0; i<LIGHTS; i++ )

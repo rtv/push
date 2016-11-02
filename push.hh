@@ -29,14 +29,14 @@ public:
 
   World( float width, float height ) ;
   
-  void AddRobot( Robot* robot );
-  void AddBox( Box* box );
-  void AddLight( Light* light );
-  void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity );
+  virtual void AddRobot( Robot* robot );
+  virtual void AddBox( Box* box );
+  virtual void AddLight( Light* light );
+  virtual void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity );
 
   // set the intensity of the light at @index. If @index is out of
   // range, the call has no effect
-  void SetLightIntensity( size_t index, float intensity );
+  virtual void SetLightIntensity( size_t index, float intensity );
 
   // return instantaneous light intensity from all sources
   float GetLightIntensityAt( float x, float y );
@@ -52,6 +52,9 @@ public:
   static bool step;
   static int skip;
   
+  bool lights_need_redraw;
+  std::vector<double> bright;
+
   GLFWwindow* window;
   int draw_interval;
   
@@ -59,6 +62,26 @@ public:
   ~GuiWorld();
   
   virtual void Step( float timestep );
+
+  virtual void AddLight( Light* light )
+  {
+    lights_need_redraw = true;
+    World::AddLight( light );
+  }
+
+  virtual void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity )
+  {
+    lights_need_redraw = true;
+    World::AddLightGrid( xcount, ycount, height, intensity );
+  }
+    
+  // set the intensity of the light at @index. If @index is out of
+  // range, the call has no effect
+  virtual void SetLightIntensity( size_t index, float intensity )
+  {
+    lights_need_redraw = true;
+    World::SetLightIntensity( index, intensity );
+  }
   
   bool RequestShutdown();    
 };
