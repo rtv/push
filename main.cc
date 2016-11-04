@@ -36,7 +36,8 @@ public:
 	   -M_PI + drand48() * 2.0*M_PI,
 	   size,
 	   100,
-	   100 ), 
+	   100,
+	   1,0,0 ), // stay charged forever 
     state( S_TURN ),
     timeleft( drand48() * TURNMAX ),
     speedx( 0 ),
@@ -113,11 +114,11 @@ int main( int argc, char* argv[] )
 {
   float WIDTH = 16;
   float HEIGHT = 16;
-  size_t ROBOTS = 64;
+  size_t ROBOTS = 48;
   size_t BOXES = 512;
   size_t LIGHTS = 256;
   float timeStep = 1.0 / 30.0;
-  float robot_size = 0.4;
+  float robot_size = 0.3;
   float box_size = 0.3;
 
   /* options descriptor */
@@ -180,16 +181,18 @@ int main( int argc, char* argv[] )
     world.AddRobot( new Pusher( world, robot_size ) );
 
   // fill the world with a grid of lights, all off
-  world.AddLightGrid( sqrt(LIGHTS), sqrt(LIGHTS), 2.0, 0.0 );
+  //world.AddLightGrid( sqrt(LIGHTS), sqrt(LIGHTS), 2.0, 0.0 );
   
+  world.AddLight( new Light( WIDTH/2, HEIGHT/2, 2.0, 1.0) );
+
   /* Loop until the user closes the window */
   while( !world.RequestShutdown() )
     {
-      if( world.steps % 1000 == 1 ) // every now and again
-	{ 
+      //if( world.steps % 1000 == 1 ) // every now and again
+	//{ 
 	  // turn on a random fraction of the lights
-	  for( int i=0; i<LIGHTS; i++ )
-	    world.SetLightIntensity( i, drand48()>0.7 ? 1.0 : 0 );
+	  //for( int i=0; i<LIGHTS; i++ )
+	  //world.SetLightIntensity( i, drand48()>0.7 ? 1.0 : 0 );
 
 	  // // turn on the lights around the edge
 	  // for( int x=0; x<sqrt(LIGHTS); x++ )
@@ -202,7 +205,7 @@ int main( int argc, char* argv[] )
 	  //     world.SetLightIntensity( y*sqrt(LIGHTS), 1 );	  
 	  //     world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 1 );	  
 	  //   }
-	}
+      //}
 
       world.Step( timeStep );	  
     }
