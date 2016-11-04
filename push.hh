@@ -3,6 +3,15 @@
 
 #include <vector>
 
+enum _entityCategory {
+  BOXBOUNDARY = 0x1,
+  ROBOTBOUNDARY = 0x2,
+  ROBOT = 0x4,
+  BOX = 0x8
+};
+
+class Robot;
+
 class Light {
 public:
  float intensity;
@@ -21,7 +30,12 @@ class World
 {
 public:  
   b2World* b2world;
+
   float width, height;
+  
+  b2Body* boxWall[4];
+  b2Body* robotWall[4];
+
   size_t steps;
   std::vector<Light*> lights;
   std::vector<Box*> boxes;    
@@ -68,7 +82,7 @@ public:
     lights_need_redraw = true;
     World::AddLight( light );
   }
-
+    
   virtual void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity )
   {
     lights_need_redraw = true;
@@ -91,7 +105,7 @@ class Robot
 {
 public:
 
-  World& world;
+   World& world;
   float size;
 
   float charge; // joules
@@ -138,8 +152,8 @@ public:
   } box_shape_t;
 
   b2Body* body;
-
-  Box( World& world, box_shape_t shape, float size );
+  
+  Box( World& world, box_shape_t shape, float size, float x, float y, float a );
 };
 
 

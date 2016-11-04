@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <getopt.h>
 #include <unistd.h> // for usleep(3)
 
@@ -29,11 +30,9 @@ private:
 public:
   
   // constructor
-  Pusher( World& world, float size ) : 
+  Pusher( World& world, float size, float x, float y, float a  ) : 
     Robot( world, 
-	   drand48() * world.width, // random location
-	   drand48() * world.height, 
-	   -M_PI + drand48() * 2.0*M_PI,
+	   x,y,a,
 	   size,
 	   100,
 	   100,
@@ -175,10 +174,24 @@ int main( int argc, char* argv[] )
   GuiWorld world( WIDTH, HEIGHT );
   
   for( int i=0; i<BOXES; i++ )
-    world.AddBox( new Box( world, Box::SHAPE_HEX, box_size ) );
+    world.AddBox( new Box( world, Box::SHAPE_HEX, box_size,
+			   WIDTH/5.0 + drand48()*WIDTH*0.6,
+			   HEIGHT/5.0 + drand48()*HEIGHT*0.6,
+			   drand48() * M_PI ) );
   
   for( int i=0; i<ROBOTS; i++ )
-    world.AddRobot( new Pusher( world, robot_size ) );
+    {
+      float x = WIDTH/2.0;
+      float y = HEIGHT/2.0;
+
+      while( x > WIDTH*0.2 && x < WIDTH*0.8 && y > HEIGHT*0.2 && y < HEIGHT*0.8 )
+	{
+	  x = drand48() * WIDTH;	  
+	  y = drand48() * HEIGHT;
+	}
+      
+      world.AddRobot( new Pusher( world, robot_size, x,y, drand48() * M_PI ));
+    }
 
   // fill the world with a grid of lights, all off
   //world.AddLightGrid( sqrt(LIGHTS), sqrt(LIGHTS), 2.0, 0.0 );

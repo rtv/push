@@ -2,7 +2,7 @@
 
 #include "push.hh" 
 
-Box::Box( World& world, box_shape_t shape, float size )
+Box::Box( World& world, box_shape_t shape, float size, float x, float y, float a )
   : body(NULL),
     size(size)
 { 
@@ -36,15 +36,17 @@ Box::Box( World& world, box_shape_t shape, float size )
   fixtureDef.friction = 1.0;
   fixtureDef.restitution = 0.1;
   
+  fixtureDef.filter.categoryBits = BOX;
+  fixtureDef.filter.maskBits = 0xFFFF; //everything
+  // BOX | ROBOT | BOXBOUNDARY | ROBOTBOUNDARY; // everything
+
   b2BodyDef bodyDef;
   bodyDef.type = b2_dynamicBody;
   
   body = world.b2world->CreateBody(&bodyDef);    
   body->SetLinearDamping( 10.0 );
   body->SetAngularDamping( 10.0 );
-  body->SetTransform( b2Vec2( world.width * drand48(), 
-			      world.height * drand48()),
-		      0 );	    	    
+  body->SetTransform( b2Vec2( x, y ), a );
   
   body->CreateFixture(&fixtureDef);
 }

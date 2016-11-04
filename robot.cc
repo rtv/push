@@ -36,6 +36,11 @@ Robot::Robot( World& world,
   fixtureDef.shape = &dynamicBox;    
   fixtureDef.density = 10;
   fixtureDef.friction = 1.0;
+
+  // prevent collision with puck-retaining strings 
+  fixtureDef.filter.categoryBits = ROBOT;
+  fixtureDef.filter.maskBits = ROBOT | BOX | ROBOTBOUNDARY; // not box boundary
+
   body->CreateFixture(&fixtureDef);
   
   // bumper has same settings the body but different size

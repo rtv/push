@@ -8,7 +8,7 @@ const float c_darkred[3] = {0.8, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
 const float c_gray[3] = { 0.9, 0.9, 1.0 };
 
-bool GuiWorld::paused = false;
+bool GuiWorld::paused = true;
 bool GuiWorld::step = false;
 int GuiWorld::skip = 10;
 
@@ -190,6 +190,14 @@ void GuiWorld::Step( float timestep )
 
       glClearColor( 0.8, 0.8, 0.8, 1.0 ); 
       glClear(GL_COLOR_BUFFER_BIT);	
+
+      // draw the walls
+      for( int i=0; i<4; i++ )
+	DrawBody( boxWall[i], c_gray );
+
+      for( int i=0; i<4; i++ )
+	DrawBody( robotWall[i], c_gray );
+
       
       
       for( auto& b : boxes )
