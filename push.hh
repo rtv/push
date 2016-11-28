@@ -14,10 +14,10 @@ class Robot;
 
 class Light {
 public:
- float intensity;
-  float x, y, z; // location (z is height above the x,y plane of the world)
+ double intensity;
+  double x, y, z; // location (z is height above the x,y plane of the world)
   
-  Light( float x, float y, float z, float intensity ) : 
+  Light( double x, double y, double z, double intensity ) : 
     x(x),y(y),z(z),intensity(intensity)
   {}
 };
@@ -31,7 +31,7 @@ class World
 public:  
   b2World* b2world;
 
-  float width, height;
+  double width, height;
   
   b2Body* boxWall[4];
   b2Body* robotWall[4];
@@ -41,22 +41,22 @@ public:
   std::vector<Box*> boxes;    
   std::vector<Robot*> robots;
 
-  World( float width, float height ) ;
+  World( double width, double height ) ;
   
   virtual void AddRobot( Robot* robot );
   virtual void AddBox( Box* box );
   virtual void AddLight( Light* light );
-  virtual void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity );
+  virtual void AddLightGrid( size_t xcount, size_t ycount, double height, double intensity );
 
   // set the intensity of the light at @index. If @index is out of
   // range, the call has no effect
-  virtual void SetLightIntensity( size_t index, float intensity );
+  virtual void SetLightIntensity( size_t index, double intensity );
 
   // return instantaneous light intensity from all sources
-  float GetLightIntensityAt( float x, float y );
+  double GetLightIntensityAt( double x, double y );
 
   // perform one simulation step
-  void Step( float timestep );
+  void Step( double timestep );
 };
 
 class GuiWorld : public World
@@ -72,10 +72,10 @@ public:
   GLFWwindow* window;
   int draw_interval;
   
-  GuiWorld( float width, float height );
+  GuiWorld( double width, double height );
   ~GuiWorld();
   
-  virtual void Step( float timestep );
+  virtual void Step( double timestep );
 
   virtual void AddLight( Light* light )
   {
@@ -83,7 +83,7 @@ public:
     World::AddLight( light );
   }
     
-  virtual void AddLightGrid( size_t xcount, size_t ycount, float height, float intensity )
+  virtual void AddLightGrid( size_t xcount, size_t ycount, double height, double intensity )
   {
     lights_need_redraw = true;
     World::AddLightGrid( xcount, ycount, height, intensity );
@@ -91,12 +91,12 @@ public:
     
   // set the intensity of the light at @index. If @index is out of
   // range, the call has no effect
-  virtual void SetLightIntensity( size_t index, float intensity )
+  virtual void SetLightIntensity( size_t index, double intensity )
   {
     lights_need_redraw = true;
     World::SetLightIntensity( index, intensity );
   }
-  
+ 
   bool RequestShutdown();    
 };
 
@@ -106,15 +106,15 @@ class Robot
 public:
 
    World& world;
-  float size;
+  double size;
 
-  float charge; // joules
-  float charge_max; // maximum storage capacity
-  float charge_delta; // rate of change of charge
+  double charge; // joules
+  double charge_max; // maximum storage capacity
+  double charge_delta; // rate of change of charge
 
-  float input_efficiency; // scale input from light sources
-  float output_metabolic; // cost per step of just being alive
-  float output_efficiency; // scale output due to motion
+  double input_efficiency; // scale input from light sources
+  double output_metabolic; // cost per step of just being alive
+  double output_efficiency; // scale output due to motion
 
   static std::vector<Light> lights;
   
@@ -122,29 +122,29 @@ public:
   b2PrismaticJoint* joint;
   
   Robot( World& world, 
-	 float x, float y, float a,  // pose
-	 float size=0.5, 
-	 float charge=100.0, 
-	 float charge_max=100.0,
-	 float input_efficiency=0.1,
-	 float output_metabolic=0.01,
-	 float output_efficiency=0.1 );  
+	 double x, double y, double a,  // pose
+	 double size=0.5, 
+	 double charge=100.0, 
+	 double charge_max=100.0,
+	 double input_efficiency=0.5,
+	 double output_metabolic=0.01,
+	 double output_efficiency=0.1 );  
   
-  virtual void Update( float timestep );
+  virtual void Update( double timestep );
 
 protected:
   // get sensor data
-  float GetLightIntensity( void );
+  double GetLightIntensity( void );
   bool GetBumperPressed( void );
 
   // send commands
-  void SetSpeed( float x, float y, float a );
+  void SetSpeed( double x, double y, double a );
 };
 
 class Box 
 {
 public:
-  float size;
+  double size;
 
   typedef enum {
     SHAPE_RECT=0,
@@ -153,7 +153,7 @@ public:
 
   b2Body* body;
   
-  Box( World& world, box_shape_t shape, float size, float x, float y, float a );
+  Box( World& world, box_shape_t shape, double size, double x, double y, double a );
 };
 
 

@@ -8,6 +8,11 @@
 
 #include "push.hh"
 
+template<class T>
+int sign(T x) {
+  return (x > 0) - (x < 0);
+}
+
 class Pusher : public Robot
 {
 private:
@@ -19,32 +24,37 @@ private:
       S_COUNT
     } control_state_t;
   
-  static const float PUSH, BACKUP, TURNMAX;
-  static const float SPEEDX, SPEEDA;
-  static const float maxspeedx, maxspeeda;
+  static const double PUSH, BACKUP, TURNMAX;
+  static const double SPEEDX, SPEEDA;
+  static const double maxspeedx, maxspeeda;
   
-  float timeleft;
+  double timeleft;
   control_state_t state;
-  float speedx, speeda;
+  double speedx, speeda;
+
+  double lastintensity;
+  double latch;
 
 public:
   
   // constructor
-  Pusher( World& world, float size, float x, float y, float a  ) : 
+  Pusher( World& world, double size, double x, double y, double a  ) : 
     Robot( world, 
 	   x,y,a,
-	   size,
-	   100,
-	   100,
-	   1,0,0 ), // stay charged forever 
+	   size),//
+	   //100,
+	   //100,
+	   // 1,0.1,0 ), // stay charged forever 
     state( S_TURN ),
     timeleft( drand48() * TURNMAX ),
     speedx( 0 ),
-    speeda( 0 )
+    speeda( 0 ),
+    lastintensity(0),
+    latch(0)
   {
   }
   
-  virtual void Update( float timestep )
+  virtual void Update( double timestep )
   {
     // IMPLEMENT ROBOT ROBOT BEHAVIOUR WITH A LITTLE STATE MACHINE
     
@@ -53,32 +63,68 @@ public:
     
     // if we are pushing and the bump switch goes off or the light is
     // too bright, force a change of control state
-    if( state == S_PUSH && ( GetLightIntensity() > 1.0 || GetBumperPressed() ) )
+    //if( state == S_PUSH && ( GetLightIntensity() > 1.0 || GetBumperPressed() ) )
+    //if( state == S_PUSH && GetBumperPressed() )
+    if( GetBumperPressed() )
       {
-	timeleft = 0.0; // end pushing right now
+	//timeleft = 0.0; // end pushing right now
+
+	latch = 100;
       }
     
+    double l = GetLightIntensity();
+
+    if( latch > 0 )
+      {
+	latch--;
+	speedx = -0.2; // backup
+	speeda = 0.0;  // straight
+      }
+    else
+      {
+	//speedx = 0.0;
+	//speedx = 0.2;//0.5 * l + 0.1;
+	//speeda = 0.9 / l + 0.1;
+
+	double diff = lastintensity-l;
+	//printf( "l %f diff %f\n", l, diff );
+	
+	speedx = 0.2;
+	
+	// if( fabs( diff ) < 0.0000001 ) // small difference
+	//   {
+	//     speeda = 0.1; // turn a bit
+	//   }
+	// else
+	  
+	
+	speeda = 2.0 + sign(diff);
+      }
+
+    /*
     if( timeleft <= 0 ) // time to change to another behaviour
       switch( state )
 	{
 	case S_PUSH:
-	  state = S_BACKUP;
+	  state = S_BACKUP; // go into BACKUP
 	  timeleft = BACKUP;
 	  speedx = -SPEEDX;
+	  //speedx = 1. * l;
 	  speeda = 0;	 
 	  break;
 	  
 	case S_BACKUP: 
-	  state = S_TURN;
+	  state = S_TURN; // go into TURN
 	  timeleft = drand48() * TURNMAX;
 	  speedx = 0;
 	  speeda = SPEEDA;	    
 	  break;
 	  
 	case S_TURN: 
-	  state = S_PUSH;
+	  state = S_PUSH; // go into PUSH
 	  timeleft = PUSH;
 	  speedx = SPEEDX;
+	  //speedx = 1.0 / l;
 	  speeda = 0;	 
 	  break;
 	  
@@ -86,6 +132,8 @@ public:
 	  std::cout << "invalid control state: " << state << std::endl;
 	exit(1);
 	}
+    */
+    lastintensity = l;
     
     SetSpeed( speedx, 0, speeda );
     
@@ -100,25 +148,25 @@ public:
 }; // class Pusher
 
 // static members
-const float Pusher::PUSH = 15.0; // seconds
-const float Pusher::BACKUP = 0.5;
-const float Pusher::TURNMAX = 2.0;
-const float Pusher::SPEEDX = 0.5;
-const float Pusher::SPEEDA = M_PI/2.0;
-const float Pusher::maxspeedx = 0.5;
-const float Pusher::maxspeeda = M_PI/2.0;
+const double Pusher::PUSH = 15.0; // seconds
+const double Pusher::BACKUP = 0.5;
+const double Pusher::TURNMAX = 2;
+const double Pusher::SPEEDX = 0.5;
+const double Pusher::SPEEDA = M_PI/2.0;
+const double Pusher::maxspeedx = 0.5;
+const double Pusher::maxspeeda = M_PI/2.0;
 
 
 int main( int argc, char* argv[] )
 {
-  float WIDTH = 16;
-  float HEIGHT = 16;
-  size_t ROBOTS = 48;
-  size_t BOXES = 512;
+  double WIDTH = 16;
+  double HEIGHT = 16;
+  size_t ROBOTS = 128;
+  size_t BOXES = 256;
   size_t LIGHTS = 256;
-  float timeStep = 1.0 / 30.0;
-  float robot_size = 0.3;
-  float box_size = 0.3;
+  double timeStep = 1.0 / 30.0;
+  double robot_size = 0.3;
+  double box_size = 0.3;
 
   /* options descriptor */
   static struct option longopts[] = {
@@ -179,10 +227,13 @@ int main( int argc, char* argv[] )
 			   HEIGHT/5.0 + drand48()*HEIGHT*0.6,
 			   drand48() * M_PI ) );
   
+  world.AddRobot( new Pusher( world, robot_size, WIDTH/2.0-3, HEIGHT/2.0-4,0 ));
+
+  //if( 0 )
   for( int i=0; i<ROBOTS; i++ )
     {
-      float x = WIDTH/2.0;
-      float y = HEIGHT/2.0;
+      double x = WIDTH/2.0;
+      double y = HEIGHT/2.0;
 
       while( x > WIDTH*0.2 && x < WIDTH*0.8 && y > HEIGHT*0.2 && y < HEIGHT*0.8 )
 	{
@@ -194,31 +245,62 @@ int main( int argc, char* argv[] )
     }
 
   // fill the world with a grid of lights, all off
-  //world.AddLightGrid( sqrt(LIGHTS), sqrt(LIGHTS), 2.0, 0.0 );
+  world.AddLightGrid( sqrt(LIGHTS), sqrt(LIGHTS), 2.0, 0.0 );
   
-  world.AddLight( new Light( WIDTH/2, HEIGHT/2, 2.0, 1.0) );
+  //world.AddLight( new Light( WIDTH/2, HEIGHT/2, 2.0, 1.0) );
+
+  double radius = 0.6*WIDTH;
+  double delta = -0.5;
 
   /* Loop until the user closes the window */
   while( !world.RequestShutdown() )
     {
-      //if( world.steps % 1000 == 1 ) // every now and again
-	//{ 
+      if( world.steps % 500 == 1 ) // every now and again
+	{ 
+	  if( radius < WIDTH * 0.2 ) 
+	    delta = 0.5;
+
+	  else if( radius > WIDTH * 0.6 ) 
+	    delta = -0.5;
+	  
+	  radius +=  delta;
+
 	  // turn on a random fraction of the lights
 	  //for( int i=0; i<LIGHTS; i++ )
-	  //world.SetLightIntensity( i, drand48()>0.7 ? 1.0 : 0 );
+	  //world.SetLightIntensity( i, drand48()>0.95 ? 1.0 : 0 );
 
-	  // // turn on the lights around the edge
-	  // for( int x=0; x<sqrt(LIGHTS); x++ )
-	  //   {
-	  //     world.SetLightIntensity( x, 1 );	  
-	  //     world.SetLightIntensity( LIGHTS-x-1, 1 );	  
-	  //   }
-	  // for( int y=0; y<sqrt(LIGHTS); y++ )
-	  //   {
-	  //     world.SetLightIntensity( y*sqrt(LIGHTS), 1 );	  
-	  //     world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 1 );	  
-	  //   }
-      //}
+	  //world.SetLightIntensity( LIGHTS/2+(sqrt(LIGHTS)/2), 1 );
+
+	  for( int x=0; x<sqrt(LIGHTS); x++ )
+	    for( int y=0; y<sqrt(LIGHTS); y++ )
+	      {
+		double cx = x - sqrt(LIGHTS)/2;
+		double cy = y - sqrt(LIGHTS)/2;
+		
+		if( fabs(cx*cx + cy*cy - radius*radius) < 6.0 )
+		  world.SetLightIntensity( x+y*sqrt(LIGHTS), 1 );	  
+		else
+		  world.SetLightIntensity( x+y*sqrt(LIGHTS), 0 );	  
+	      }	  
+	  
+	  //world.SetLightIntensity( x, 1 );	  
+
+#if 0
+	  // turn on the lights around the edge
+	  for( int x=0; x<sqrt(LIGHTS); x++ )
+	    {
+	      world.SetLightIntensity( x, 1 );	  
+	      world.SetLightIntensity( LIGHTS-x-1, 1 );	  
+	    }
+	  for( int y=0; y<sqrt(LIGHTS); y++ )
+	    {
+	      world.SetLightIntensity( y*sqrt(LIGHTS), 1 );	  
+	      world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 1 );	  
+	    }
+#endif
+    
+
+ }
 
       world.Step( timeStep );	  
     }

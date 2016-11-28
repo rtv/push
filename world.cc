@@ -1,6 +1,6 @@
 #include "push.hh"
 
-World::World( float width, float height ) :
+World::World( double width, double height ) :
   steps(0),
   width(width),
   height(height),
@@ -61,10 +61,10 @@ void World::AddLight( Light* l )
   lights.push_back( l );
 }
 
-void World::AddLightGrid( size_t xcount, size_t ycount, float z, float intensity )
+void World::AddLightGrid( size_t xcount, size_t ycount, double z, double intensity )
 {
-  float xspace = width/(float)xcount;
-  float yspace = height/(float)ycount;
+  double xspace = width/(double)xcount;
+  double yspace = height/(double)ycount;
   
   for( size_t y=0; y<ycount; y++ )
     for( size_t x=0; x<xcount; x++ )
@@ -84,32 +84,32 @@ void World::AddBox( Box* b  )
   boxes.push_back( b );
 }
 
-void World::SetLightIntensity( size_t index, float intensity )
+void World::SetLightIntensity( size_t index, double intensity )
 {
   if( index < lights.size() )
     lights[index]->intensity = intensity;
 }
 
-float World::GetLightIntensityAt( float x, float y )
+double World::GetLightIntensityAt( double x, double y )
 {
   // integrate brightness over all light sources
-  float total_brightness = 0.0;
+  double total_brightness = 0.0;
 
   for( auto& l : lights )
     {
       // horizontal and vertical distances
-      float dx = x - l->x;
-      float dy = y - l->y;
-      float dz = l->z;
+      double dx = x - l->x;
+      double dy = y - l->y;
+      double dz = l->z;
 
-      float distsquared = dx*dx + dy*dy + dz*dz;
-      float dist = sqrt( distsquared );
+      double distsquared = dx*dx + dy*dy + dz*dz;
+      double dist = sqrt( distsquared );
 
       // brightness as a function of distance
-      float brightness = l->intensity / distsquared;
+      double brightness = l->intensity / distsquared;
 
       // now factor in the angle to the light      
-      float theta = atan2( dz, hypot(dx*dx,dy*dy) );
+      double theta = atan2( dz, hypot(dx*dx,dy*dy) );
 
       // and integrate
       total_brightness += brightness * sin(theta);
@@ -119,7 +119,7 @@ float World::GetLightIntensityAt( float x, float y )
 }
 
 
-void World::Step( float timestep )
+void World::Step( double timestep )
 {
   for( auto& r : robots )
     r->Update( timestep );

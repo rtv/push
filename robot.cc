@@ -3,15 +3,15 @@
 
 // constructor
 Robot::Robot( World& world, 
-	      float x, 
-	      float y, 
-	      float a, 
-	      float size,
-	      float charge,
-	      float charge_max,
-	      float input_efficiency,
-	      float output_metabolic, 
-	      float output_efficiency ) : 
+	      double x, 
+	      double y, 
+	      double a, 
+	      double size,
+	      double charge,
+	      double charge_max,
+	      double input_efficiency,
+	      double output_metabolic, 
+	      double output_efficiency ) : 
   world(world),
   size( size ),
   charge(charge),
@@ -74,9 +74,9 @@ Robot::Robot( World& world,
   bumper->SetTransform( body->GetWorldPoint( b2Vec2( size/2,0) ), a );	
 }
 
-float Robot::GetLightIntensity( void )
+double Robot::GetLightIntensity( void )
 {
-  const b2Vec2 here = body->GetWorldCenter();  
+  const b2Vec2 here = body->GetWorldCenter();    
   return world.GetLightIntensityAt( here.x, here.y );
 }
 
@@ -86,13 +86,13 @@ bool Robot::GetBumperPressed( void )
 }
 
 // set body speed in body-local coordinate frame
-void Robot::SetSpeed( float x, float y, float a )
+void Robot::SetSpeed( double x, double y, double a )
 {  
   body->SetLinearVelocity( body->GetWorldVector(b2Vec2( x, y )));
   body->SetAngularVelocity( a );
 }
 
-void Robot::Update( float timestep )
+void Robot::Update( double timestep )
 {
   // absorb energy from lights
   charge_delta = input_efficiency * GetLightIntensity(); // gather power from light
@@ -104,7 +104,7 @@ void Robot::Update( float timestep )
   charge_delta -= output_efficiency * body->GetAngularVelocity(); 
   charge_delta -= output_efficiency * body->GetLinearVelocity().Length();
 
-  charge += charge_delta;
+  //  charge += charge_delta;
   
   if( charge <= 0.0 )
     {

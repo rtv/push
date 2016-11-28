@@ -2,11 +2,11 @@
 
 #include "push.hh"
 
-const float c_yellow[3] = {1.0, 1.0, 0.0 };
-const float c_red[3] = {1.0, 0.0, 0.0 };
-const float c_darkred[3] = {0.8, 0.0, 0.0 };
-const float c_tan[3] = { 0.8, 0.6, 0.5};
-const float c_gray[3] = { 0.9, 0.9, 1.0 };
+const double c_yellow[3] = {1.0, 1.0, 0.0 };
+const double c_red[3] = {1.0, 0.0, 0.0 };
+const double c_darkred[3] = {0.8, 0.0, 0.0 };
+const double c_tan[3] = { 0.8, 0.6, 0.5};
+const double c_gray[3] = { 0.9, 0.9, 1.0 };
 
 bool GuiWorld::paused = true;
 bool GuiWorld::step = false;
@@ -53,7 +53,7 @@ void key_callback( GLFWwindow* window,
 }
 
 
-void DrawBody( b2Body* b, const float color[3] )
+void DrawBody( b2Body* b, const double color[3] )
 {
   for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) 
     {
@@ -70,7 +70,7 @@ void DrawBody( b2Body* b, const float color[3] )
 	    
 	    const int count = poly->GetVertexCount();
 	    
-	    glColor3fv( color );
+	    glColor3dv( color );
 	    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
 	    glBegin( GL_POLYGON );	
 	    
@@ -83,7 +83,7 @@ void DrawBody( b2Body* b, const float color[3] )
 	    
 	    glLineWidth( 2.0 );
 	    glColor3f( color[0]/5, color[1]/5, color[2]/5 );
-	    //glColor3fv( color );
+	    //glColor3dv( color );
 	    //glColor3f( 0,0,0 );
 	    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	    glBegin( GL_POLYGON );	
@@ -104,17 +104,17 @@ void DrawBody( b2Body* b, const float color[3] )
 }
 
 
-void DrawDisk(float cx, float cy, float r ) 
+void DrawDisk(double cx, double cy, double r ) 
 { 
   const int num_segments = 32.0 * sqrtf( r );
   
-  const float theta = 2 * M_PI / float(num_segments); 
-  const float c = cosf(theta);//precalculate the sine and cosine
-  const float s = sinf(theta);
-  float t;
+  const double theta = 2 * M_PI / double(num_segments); 
+  const double c = cosf(theta);//precalculate the sine and cosine
+  const double s = sinf(theta);
+  double t;
   
-  float x = r; //we start at angle = 0 
-  float y = 0; 
+  double x = r; //we start at angle = 0 
+  double y = 0; 
   
   glBegin(GL_TRIANGLE_STRIP); 
   for(int ii = 0; ii < num_segments; ii++) 
@@ -133,7 +133,7 @@ void DrawDisk(float cx, float cy, float r )
   glEnd(); 
 }
 
-GuiWorld::GuiWorld( float width, float height ) :
+GuiWorld::GuiWorld( double width, double height ) :
   World( width, height ),
   window(NULL),
   draw_interval( skip ),
@@ -174,7 +174,7 @@ GuiWorld::GuiWorld( float width, float height ) :
     glfwSetKeyCallback (window, key_callback);
 }
 
-void GuiWorld::Step( float timestep )
+void GuiWorld::Step( double timestep )
 {
   if( !paused || step)
     {
@@ -191,21 +191,30 @@ void GuiWorld::Step( float timestep )
       glClearColor( 0.8, 0.8, 0.8, 1.0 ); 
       glClear(GL_COLOR_BUFFER_BIT);	
 
+      // draw the floor
+      int count=0;
+      glColor3f( 0.7,0.7,0.7 );
+      for (double i = 0; i < width ; ++i) {
+	for (double j = 0; j < height; ++j) {
+	  //if( count++ % 2 == 0) // if i + j is even
+	  if( (int(i) + int(j)) % 2 == 0 )
+	  glRectf(i, j, i+1, j+1 );    // draw the rectangle
+	}
+      }
+
       // draw the walls
       for( int i=0; i<4; i++ )
 	DrawBody( boxWall[i], c_gray );
 
       for( int i=0; i<4; i++ )
 	DrawBody( robotWall[i], c_gray );
-
-      
       
       for( auto& b : boxes )
 	DrawBody( b->body, c_gray );
       
       for( auto& r : robots )
 	{
-	  float col[3];
+	  double col[3];
 	  col[0] = (r->charge_max - r->charge) / r->charge_max;
 	  col[1] = r->charge / r->charge_max;
 	  col[2] = 0;
@@ -223,7 +232,7 @@ void GuiWorld::Step( float timestep )
       for( auto& r : robots )
 	{      
 	  const b2Transform& t = r->body->GetTransform();
-	  const float a = t.q.GetAngle();
+	  const double a = t.q.GetAngle();
 	  
 	  glVertex2f( t.p.x + r->size/2.0 * cos(a),
 		      t.p.y + r->size/2.0 * sin(a) );		  
@@ -242,26 +251,65 @@ void GuiWorld::Step( float timestep )
       glEnd();
       
       const size_t side = 64;      
-      const float dx = width/(float)side;
-      const float dy = height/(float)side;      
+      const double dx = width/(double)side;
+      const double dy = height/(double)side;      
       
+#if 0
+      glLineWidth(5);
+      glBegin( GL_LINES );
+      // draw a sample of the light intensity vector field
+      for( double y=0; y<height; y+=height/32.0 )
+	for( double x=0; x<width; x+=width/32.0 )
+	  {
+	    double l = GetLightIntensityAt( x, y );
+	    
+	    double eps = 0.5;
+	    
+	    double maxl = l;
+	    double maxdx, maxdy;
+
+	    double r = 0.2;
+	    // explore a circle around the point
+	    for( double a=0; a<2.0*M_PI; a+=M_PI/64.0 )
+	      {		
+		double dx = r * cos(a);
+		double dy = r * sin(a);	     	  
+		double brightness = GetLightIntensityAt( x+dx, y+dy );
+		
+		if( maxl < brightness )
+		  {
+		    maxl = brightness;
+		    maxdx = dx;
+		    maxdy = dy;
+		  }
+	      }
+	    
+	    glColor3f(0,0,1);
+	    glVertex2f( x, y );
+	    glColor3f(1,0,0);
+	    glVertex2f( x+maxdx, y+maxdy );
+	    
+	  }
+      glEnd();
+#endif
+
       if( lights_need_redraw )
 	{
 	  lights_need_redraw = false;
 
 	  // draw grid of light intensity
-	  //float bright[side][side];
+	  //double bright[side][side];
 	  
 	  bright.resize( side*side );
 
-	  float max = 0;
+	  double max = 0;
 	  for( int y=0; y<side; y++ )
 	    {
 	      for( int x=0; x<side; x++ )
 		{
 		  // find the world position at this grid location  
-		  float wx = x * dx + dx/2.0; 
-		  float wy = y * dy + dy/2.0; 
+		  double wx = x * dx + dx/2.0; 
+		  double wy = y * dy + dy/2.0; 
 		  
 		  bright[y*side+x] = GetLightIntensityAt( wx, wy );
 		  
@@ -288,8 +336,8 @@ void GuiWorld::Step( float timestep )
 	for( int x=0; x<side; x++ )
 	  {
 	    // find the world position at this grid location  
-	    float wx = x * dx + dx/2.0; 
-	    float wy = y * dy + dy/2.0; 
+	    double wx = x * dx + dx/2.0; 
+	    double wy = y * dy + dy/2.0; 
 	    
 	    glColor4f( 1,1,0, bright[y*side+x] );
 	    

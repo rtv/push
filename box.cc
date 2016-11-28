@@ -2,7 +2,7 @@
 
 #include "push.hh" 
 
-Box::Box( World& world, box_shape_t shape, float size, float x, float y, float a )
+Box::Box( World& world, box_shape_t shape, double size, double x, double y, double a )
   : body(NULL),
     size(size)
 { 
