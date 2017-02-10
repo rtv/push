@@ -14,7 +14,7 @@ const float c_darkred[3] = {0.8, 0.0, 0.0 };
 const float c_tan[3] = { 0.8, 0.6, 0.5};
 const float c_gray[3] = { 0.9, 0.9, 1.0 };
 
-bool GuiWorld::paused = true;
+bool GuiWorld::paused = false;
 bool GuiWorld::step = false;
 int GuiWorld::skip = 1;
 

@@ -13,6 +13,7 @@ int sign(T x) {
   return (x > 0) - (x < 0);
 }
 
+double letterL[] = { 10,6, 10, 7, 10, 8, 10, 9, 10, 10, 11, 10, 12, 10, 13, 10, 14, 10 }; 
 class Pusher : public Robot
 {
 private:
@@ -21,7 +22,8 @@ private:
       S_PUSH = 0,
       S_BACKUP,
       S_TURN,
-      S_COUNT
+      S_COUNT,
+      S_ESCAPE
     } control_state_t;
   
   static const double PUSH, BACKUP, TURNMAX;
@@ -35,22 +37,29 @@ private:
   double lastintensity;
   double latch;
 
+  int count;
+  bool escape;
+
 public:
   
   // constructor
   Pusher( World& world, double size, double x, double y, double a  ) : 
     Robot( world, 
 	   x,y,a,
-	   size),//
-	   //100,
-	   //100,
-	   // 1,0.1,0 ), // stay charged forever 
-    state( S_TURN ),
+	   size,
+	   0, // charge start
+	   20, // charge max
+	   0.4 ), // input efficiency
+    //0.1,
+    //	   0 ), // stay charged forever 
+    state( S_PUSH ),
     timeleft( drand48() * TURNMAX ),
     speedx( 0 ),
     speeda( 0 ),
     lastintensity(0),
-    latch(0)
+    latch(0),
+    count( drand48() * 1000.0 ),
+    escape(false)
   {
   }
   
@@ -58,84 +67,72 @@ public:
   {
     // IMPLEMENT ROBOT ROBOT BEHAVIOUR WITH A LITTLE STATE MACHINE
     
+    double lleft = GetLightIntensityAt( 0, -0.1 );
+    double lright = GetLightIntensityAt( 0, +0.1 );
+
     // count down to changing control state
-    timeleft -= timestep;
+    //timeleft -= timestep;
+
+    //count++;
     
+
+    //bool escape = false;
+
     // if we are pushing and the bump switch goes off or the light is
     // too bright, force a change of control state
     //if( state == S_PUSH && ( GetLightIntensity() > 1.0 || GetBumperPressed() ) )
     //if( state == S_PUSH && GetBumperPressed() )
+    
     if( GetBumperPressed() )
       {
-	//timeleft = 0.0; // end pushing right now
-
-	latch = 100;
+	//puts( "BUMPER" );
+	// 	//timeleft = 0.0; // end pushing right now
+	
+       	latch = 75;              
+ 	//escape = true;
       }
     
-    double l = GetLightIntensity();
-
-    if( latch > 0 )
+    if( --latch > 0 )
       {
-	latch--;
-	speedx = -0.2; // backup
-	speeda = 0.0;  // straight
+	if( latch > 50 )
+	  {
+	    //puts( "LATCH BACKUP" );
+	    speedx = -0.4; // backup
+	    speeda = 0.0;  
+	  }
+	else if( latch > 25 )
+	  {
+	    //puts( "LATCH TURN" );
+	    speedx = 0; 
+	    speeda = 0.8;  // turn
+	  }
+	else
+	  {
+	    //puts( "LATCH BAIL" );
+	    speedx = 0.4; 
+	    speeda = 0.0;  // turn
+	  }
       }
     else
       {
-	//speedx = 0.0;
-	//speedx = 0.2;//0.5 * l + 0.1;
-	//speeda = 0.9 / l + 0.1;
+	//puts( "taxis" );
 
-	double diff = lastintensity-l;
-	//printf( "l %f diff %f\n", l, diff );
+	const double l = GetLightIntensity();
+	const double diff = lright - lleft;
+	//printf( "l %f r %f diff %f\n", lleft, lright, diff );
 	
-	speedx = 0.2;
-	
-	// if( fabs( diff ) < 0.0000001 ) // small difference
-	//   {
-	//     speeda = 0.1; // turn a bit
-	//   }
-	// else
-	  
-	
-	speeda = 2.0 + sign(diff);
-      }
-
-    /*
-    if( timeleft <= 0 ) // time to change to another behaviour
-      switch( state )
-	{
-	case S_PUSH:
-	  state = S_BACKUP; // go into BACKUP
-	  timeleft = BACKUP;
-	  speedx = -SPEEDX;
-	  //speedx = 1. * l;
-	  speeda = 0;	 
-	  break;
-	  
-	case S_BACKUP: 
-	  state = S_TURN; // go into TURN
-	  timeleft = drand48() * TURNMAX;
+	// 32x32 l > 1.5
+	// 16x6 l > 0.4
+	if( l > 0.4 || fabs(diff) > 0.01 ) // in the light or large diff
 	  speedx = 0;
-	  speeda = SPEEDA;	    
-	  break;
-	  
-	case S_TURN: 
-	  state = S_PUSH; // go into PUSH
-	  timeleft = PUSH;
-	  speedx = SPEEDX;
-	  //speedx = 1.0 / l;
-	  speeda = 0;	 
-	  break;
-	  
-	default:
-	  std::cout << "invalid control state: " << state << std::endl;
-	exit(1);
-	}
-    */
-    lastintensity = l;
-    
-    SetSpeed( speedx, 0, speeda );
+	else
+	  speedx = 0.4;//0.5 * l + 0.1;
+	
+	speeda = diff > 0 ? 0.5 : -0.5;
+      }
+        
+  //printf( "%.2f : %.2f\n", speedx, speeda );
+  SetSpeed( speedx, 0, speeda );
     
     // if low on power but charging, stop moving
     //if( charge < charge_max/5.0 && charge_delta > 0 )
@@ -156,14 +153,14 @@ const double Pusher::SPEEDA = M_PI/2.0;
 const double Pusher::maxspeedx = 0.5;
 const double Pusher::maxspeeda = M_PI/2.0;
 
-
 int main( int argc, char* argv[] )
 {
-  double WIDTH = 16;
-  double HEIGHT = 16;
+  double WIDTH = 32;
+  double HEIGHT = 32;
   size_t ROBOTS = 128;
-  size_t BOXES = 256;
-  size_t LIGHTS = 256;
+  size_t BOXES = 512;
+  size_t LIGHTS = 32*32;
+  //size_t LIGHTS = 16*16;
   double timeStep = 1.0 / 30.0;
   double robot_size = 0.3;
   double box_size = 0.3;
@@ -223,11 +220,11 @@ int main( int argc, char* argv[] )
   
   for( int i=0; i<BOXES; i++ )
     world.AddBox( new Box( world, Box::SHAPE_HEX, box_size,
-			   WIDTH/5.0 + drand48()*WIDTH*0.6,
-			   HEIGHT/5.0 + drand48()*HEIGHT*0.6,
+			   WIDTH/4.0 + drand48()*WIDTH*0.5,
+			   HEIGHT/4.0 + drand48()*HEIGHT*0.5,
 			   drand48() * M_PI ) );
   
-  world.AddRobot( new Pusher( world, robot_size, WIDTH/2.0-3, HEIGHT/2.0-4,0 ));
+  //world.AddRobot( new Pusher( world, robot_size, WIDTH/2.0-3, HEIGHT/2.0-4,0 ));
 
   //if( 0 )
   for( int i=0; i<ROBOTS; i++ )
@@ -249,61 +246,91 @@ int main( int argc, char* argv[] )
   
   //world.AddLight( new Light( WIDTH/2, HEIGHT/2, 2.0, 1.0) );
 
-  double radius = 0.6*WIDTH;
-  double delta = -0.5;
+  const double RADMAX = WIDTH/2.0 * 0.9;
+  double RADMIN = 2.5;//RADMAX-1;
+
+  double radius = RADMAX;
+
+  double updelta = 2.0;
+  double downdelta = -0.5;
+  double delta =  downdelta;
+
+  double lside = sqrt(LIGHTS);
+  double lx = WIDTH / lside; // distance between lights
+  double ly = HEIGHT / lside;
+
+  uint64_t maxsteps = 10000L;
 
   /* Loop until the user closes the window */
-  while( !world.RequestShutdown() )
+  while( !world.RequestShutdown() && world.steps < maxsteps )
     {
-      if( world.steps % 500 == 1 ) // every now and again
+      if( world.steps % 300 == 1 ) // every now and again
 	{ 
-	  if( radius < WIDTH * 0.2 ) 
-	    delta = 0.5;
+	  if( radius < RADMIN ) 
+	    {
+	      //delta = updelta;
+	      //RADMIN--;
+	      radius = RADMAX/2.0;
+	      delta = 0.5;
+	    }
 
-	  else if( radius > WIDTH * 0.6 ) 
-	    delta = -0.5;
+	  else if( radius > RADMAX ) 
+	    delta = downdelta;
 	  
-	  radius +=  delta;
-
 	  // turn on a random fraction of the lights
 	  //for( int i=0; i<LIGHTS; i++ )
 	  //world.SetLightIntensity( i, drand48()>0.95 ? 1.0 : 0 );
 
-	  //world.SetLightIntensity( LIGHTS/2+(sqrt(LIGHTS)/2), 1 );
+	  // 	  world.SetLightIntensity( LIGHTS/2+(sqrt(LIGHTS)/2), 1 );
 
-	  for( int x=0; x<sqrt(LIGHTS); x++ )
-	    for( int y=0; y<sqrt(LIGHTS); y++ )
+#if 1
+	  for( int x=0; x<lside; x++ )
+	    for( int y=0; y<lside; y++ )
 	      {
-		double cx = x - sqrt(LIGHTS)/2;
-		double cy = y - sqrt(LIGHTS)/2;
+		double cx = (x - lside/2.0) * lx;
+		double cy = (y - lside/2.0) * ly;
 		
-		if( fabs(cx*cx + cy*cy - radius*radius) < 6.0 )
-		  world.SetLightIntensity( x+y*sqrt(LIGHTS), 1 );	  
+		if( fabs(hypot( cx, cy ) - radius) < WIDTH*0.05 )		    
+		   world.SetLightIntensity( x+y*sqrt(LIGHTS), 1 );	  
 		else
 		  world.SetLightIntensity( x+y*sqrt(LIGHTS), 0 );	  
 	      }	  
 	  
+#endif
+
+	  //for( int i=0; i<sizeof(letterL); i+=2 )
+	  // world.SetLightIntensity( letterL[i] + letterL[i+1] *sqrt(LIGHTS), 1 ); 	    
+
 	  //world.SetLightIntensity( x, 1 );	  
 
-#if 0
-	  // turn on the lights around the edge
-	  for( int x=0; x<sqrt(LIGHTS); x++ )
+#if 1
+	  if( radius >= RADMAX )
 	    {
-	      world.SetLightIntensity( x, 1 );	  
-	      world.SetLightIntensity( LIGHTS-x-1, 1 );	  
-	    }
-	  for( int y=0; y<sqrt(LIGHTS); y++ )
-	    {
-	      world.SetLightIntensity( y*sqrt(LIGHTS), 1 );	  
-	      world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 1 );	  
+	      // turn on the lights around the edge
+	      for( int x=0; x<sqrt(LIGHTS); x++ )
+		{
+		  world.SetLightIntensity( x, 1 );	  
+		  world.SetLightIntensity( LIGHTS-x-1, 1 );	  
+		  world.SetLightIntensity( x, 2 );	  
+		  world.SetLightIntensity( LIGHTS-x-1, 2 );	  
+		}
+	      for( int y=0; y<sqrt(LIGHTS); y++ )
+		{
+		  world.SetLightIntensity( y*sqrt(LIGHTS), 1 );	  
+		  world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 1 );	  
+		  world.SetLightIntensity( y*sqrt(LIGHTS), 2 );	  
+		  world.SetLightIntensity( LIGHTS-y*sqrt(LIGHTS)-1, 2 );	  
+		}
 	    }
 #endif
     
-
- }
-
+	  radius +=  delta;	  	  	  
+	}
+      
       world.Step( timeStep );	  
     }
   
+  printf( "Completed %lu steps.", world.steps );
+
   return 0;
 }

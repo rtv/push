@@ -32,7 +32,7 @@ Box::Box( World& world, box_shape_t shape, double size, double x, double y, doub
   
   b2FixtureDef fixtureDef;
   fixtureDef.shape = &dynamicBox;
-  fixtureDef.density = 2;
+  fixtureDef.density = 0.5;
   fixtureDef.friction = 1.0;
   fixtureDef.restitution = 0.1;
   

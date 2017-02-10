@@ -10,7 +10,7 @@ World::World( double width, double height ) :
     // set interior box container
     b2BodyDef boxWallDef;
     b2PolygonShape groundBox;
-    groundBox.SetAsBox( width/3.0, 0.01f );    
+    groundBox.SetAsBox( width * 3.0, 0.01f );    
     
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &groundBox;    
@@ -25,10 +25,10 @@ World::World( double width, double height ) :
 	boxWall[i]->CreateFixture(&fixtureDef );
       }
     
-    boxWall[0]->SetTransform( b2Vec2( width/2, height/6.0 ), 0 );    
-    boxWall[1]->SetTransform( b2Vec2( width/2, height-height/6.0 ), 0 );    
-    boxWall[2]->SetTransform( b2Vec2( width/6.0, height/2 ), M_PI/2.0 );    
-    boxWall[3]->SetTransform( b2Vec2( width-width/6.0, height/2 ), M_PI/2.0 );
+    boxWall[0]->SetTransform( b2Vec2( width/2, height/4.0 ), 0 );    
+    boxWall[1]->SetTransform( b2Vec2( width/2, height-height/4.0 ), 0 );    
+    boxWall[2]->SetTransform( b2Vec2( width/4.0, height/2 ), M_PI/2.0 );    
+    boxWall[3]->SetTransform( b2Vec2( width-width/5.0, height/4.0 ), M_PI/2.0 );
 
 
     // set exterior box container
@@ -95,26 +95,66 @@ double World::GetLightIntensityAt( double x, double y )
   // integrate brightness over all light sources
   double total_brightness = 0.0;
 
-  for( auto& l : lights )
-    {
-      // horizontal and vertical distances
-      double dx = x - l->x;
-      double dy = y - l->y;
-      double dz = l->z;
+  const double maxdist = width/5.0;
 
-      double distsquared = dx*dx + dy*dy + dz*dz;
-      double dist = sqrt( distsquared );
+  // only inspect lights that are less than maxdist away
+  const size_t numlights = lights.size();
+  const int lwidth = sqrt( numlights );
+  const int lheight = lwidth;
 
-      // brightness as a function of distance
-      double brightness = l->intensity / distsquared;
+  //printf( "%lu numlights, %d lwidth %d lheight\n", numlights, lwidth, lheight );
 
-      // now factor in the angle to the light      
-      double theta = atan2( dz, hypot(dx*dx,dy*dy) );
+  // find the light grid position of x,y
+  const double scale = (double)lwidth / (double)width;
+  const int lx = x * scale;
+  const int ly = y * scale;
 
-      // and integrate
-      total_brightness += brightness * sin(theta);
-    }
+  // find the half-width of the neighborhood we're interested in
+  const int halfwidth = maxdist * scale;
 
+  //printf( "%.2f,%.2f  is cell %d,%d and halfwidth is %d\n", x, y, lx, ly, halfwidth );
+  
+  for( int yy = std::max( 0, ly - halfwidth); yy < std::min( lheight-1, ly+halfwidth ); yy++ )
+    for( int xx = std::max( 0, lx - halfwidth); xx < std::min( lwidth-1, lx+halfwidth ); xx++ )
+      {
+   	const size_t index =  xx + yy * lwidth;
+	
+	//	printf( "  %d,%d %lu\n", xx, yy, index );
+	
+   	assert( index < lights.size() );
+	
+	
+	auto& l = lights[ index ];
+	
+	//for( auto& l: lights )
+	// {
+	//printf( "%.2f %.2f\n", l->x, l->y );
+	
+	if( l->intensity == 0.0 )
+	  continue;
+	
+	// horizontal and vertical distances
+	const double dx = x - l->x;
+	const double dy = y - l->y;
+	
+	if( fabs(dx) > maxdist || fabs(dy) > maxdist )
+	  continue;
+	
+	const double dz = l->z;
+	const double distsquared = dx*dx + dy*dy + dz*dz;
+	const double dist = sqrt( distsquared );
+	
+	// brightness as a function of distance
+	const double brightness = l->intensity / distsquared;
+	
+	// now factor in the angle to the light      
+	const double theta = atan2( dz, hypot(dx*dx,dy*dy) );
+	
+	// and integrate
+	double noise = (drand48() - 0.5 ) * 0.00;
+	total_brightness += brightness * sin(theta) + noise;
+      }
+  
   return total_brightness;
 }
 

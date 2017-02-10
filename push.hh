@@ -100,7 +100,6 @@ public:
   bool RequestShutdown();    
 };
 
-
 class Robot
 {
 public:
@@ -115,6 +114,8 @@ public:
   double input_efficiency; // scale input from light sources
   double output_metabolic; // cost per step of just being alive
   double output_efficiency; // scale output due to motion
+
+  double targets[7];
 
   static std::vector<Light> lights;
   
@@ -132,13 +133,20 @@ public:
   
   virtual void Update( double timestep );
 
-protected:
+  //protected:
   // get sensor data
   double GetLightIntensity( void );
+  double GetLightIntensityAt( double x, double y ) const;
   bool GetBumperPressed( void );
+
+  void GetNeighbors( double pixels[8] );
+  double* GetTargets( void );
 
   // send commands
   void SetSpeed( double x, double y, double a );
+
+private:
+  void UpdateTargetSensor( void );
 };
 
 class Box 
