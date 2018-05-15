@@ -10,7 +10,7 @@ World::World( double width, double height ) :
     // set interior box container
     b2BodyDef boxWallDef;
     b2PolygonShape groundBox;
-    groundBox.SetAsBox( width * 3.0, 0.01f );    
+    groundBox.SetAsBox( width / 4.0, 0.01f );    
     
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &groundBox;    
@@ -28,7 +28,7 @@ World::World( double width, double height ) :
     boxWall[0]->SetTransform( b2Vec2( width/2, height/4.0 ), 0 );    
     boxWall[1]->SetTransform( b2Vec2( width/2, height-height/4.0 ), 0 );    
     boxWall[2]->SetTransform( b2Vec2( width/4.0, height/2 ), M_PI/2.0 );    
-    boxWall[3]->SetTransform( b2Vec2( width-width/5.0, height/4.0 ), M_PI/2.0 );
+    boxWall[3]->SetTransform( b2Vec2( width-width/4.0, height-height/2.0 ), M_PI/2.0 );
 
 
     // set exterior box container
@@ -125,10 +125,6 @@ double World::GetLightIntensityAt( double x, double y )
 	
 	
 	auto& l = lights[ index ];
-	
-	//for( auto& l: lights )
-	// {
-	//printf( "%.2f %.2f\n", l->x, l->y );
 	
 	if( l->intensity == 0.0 )
 	  continue;

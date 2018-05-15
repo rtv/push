@@ -230,95 +230,7 @@ void GuiWorld::Step( double timestep )
 	  col[1] = r->charge / r->charge_max;
 	  col[2] = 0;
 
-	  DrawBody( r->body, col );
-	  DrawBody( r->bumper, c_darkred );
-
-#if 0
-	  double pixels[8];
-	  r->GetNeighbors( pixels );
-
-	  //for( int i=0; i<8; i++ )
-	  // printf( "%.3f ", pixels[i] );
-	  //puts("");
-	  
-	  // render the sensors
-	  const double fov = 2.0 * M_PI;
-	  const double pixel_count = 8;
-	  double rad_per_pixel = fov / pixel_count;
-	  glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );	  
-	  glPushMatrix();
-			
-	  const b2Vec2 pose = r->body->GetPosition();
-	  const double angle = r->body->GetAngle();
-
-	  glTranslatef( pose.x, pose.y, 0 );
-	  glRotatef( RTOD(angle), 0,0,1 );
-
-	  //printf( "rad per pixel %.4f\n", rad_per_pixel );
-
-	  for( unsigned int p=0; p<pixel_count; p++ )
-	    {
-	      double angle = -fov/2.0 + (p+0.5) * rad_per_pixel;
-	      double dx1 = pixels[p] * cos(angle+rad_per_pixel/2.0);
-	      double dy1 = pixels[p] * sin(angle+rad_per_pixel/2.0);
-	      double dx2 = pixels[p] * cos(angle-rad_per_pixel/2.0);
-	      double dy2 = pixels[p] * sin(angle-rad_per_pixel/2.0);
-	      
-	      glColor4f( 1,0,0, pixels[p<3.0] ? 0.2 : 0.05 );
-	      
-	      glBegin( GL_POLYGON );
-	      glVertex2f( 0,0 );
-	      glVertex2f( dx1, dy1 );
-	      glVertex2f( dx2, dy2 );
-	      glEnd();                  
-	    }	  
-#endif
-	  
-	  glPopMatrix();
-
-	  double* targets = r->GetTargets();
-
-	  //for( int i=0; i<7; i++ )
-	  // printf( "%.3f ", targets[i] );
-	  //puts("");
-	  
-	  // render the sensors
-	  const double fov = 2.0 * M_PI;
-	  const double pixel_count = 7;
-	  double rad_per_pixel = fov / pixel_count;
-	  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );	  
-	  glPushMatrix();
-	  
-	  const b2Vec2 pose = r->body->GetPosition();
-	  const double angle = r->body->GetAngle();
-	  
-	  glTranslatef( pose.x, pose.y, 0 );
-	  glRotatef( RTOD(angle), 0,0,1 );
-	  
-	  //printf( "rad per pixel %.4f\n", rad_per_pixel );
-	  
-	  for( unsigned int p=0; p<pixel_count; p++ )
-	    {
-	      const double angle = -fov/2.0 + (p+0.5) * rad_per_pixel;
-	      const double dx1 = targets[p] * cos(angle+rad_per_pixel/2.0);
-	      const double dy1 = targets[p] * sin(angle+rad_per_pixel/2.0);
-	      const double dx2 = targets[p] * cos(angle-rad_per_pixel/2.0);
-	      const double dy2 = targets[p] * sin(angle-rad_per_pixel/2.0);
-	      
-	      //if( r->escape )
-		glColor4f( 0,1,0, 0.8 );
-		//else
-		//glColor4f( 1,0,0, 0.6 );
-
-	      glBegin( GL_POLYGON );
-	      glVertex2f( 0,0 );
-	      glVertex2f( dx1, dy1 );
-	      glVertex2f( dx2, dy2 );
-	      glEnd();                  
-	    }	  
-	  
-	  glPopMatrix();
-	  
+	  DrawBody( r->body, col );	 
 	}
       
       // draw a nose on the robot
@@ -352,45 +264,6 @@ void GuiWorld::Step( double timestep )
       const double dx = width/(double)side;
       const double dy = height/(double)side;      
       
-#if 0
-      glLineWidth(5);
-      glBegin( GL_LINES );
-      // draw a sample of the light intensity vector field
-      for( double y=0; y<height; y+=height/32.0 )
-	for( double x=0; x<width; x+=width/32.0 )
-	  {
-	    double l = GetLightIntensityAt( x, y );
-	    
-	    double eps = 0.5;
-	    
-	    double maxl = l;
-	    double maxdx, maxdy;
-
-	    double r = 0.2;
-	    // explore a circle around the point
-	    for( double a=0; a<2.0*M_PI; a+=M_PI/64.0 )
-	      {		
-		double dx = r * cos(a);
-		double dy = r * sin(a);	     	  
-		double brightness = GetLightIntensityAt( x+dx, y+dy );
-		
-		if( maxl < brightness )
-		  {
-		    maxl = brightness;
-		    maxdx = dx;
-		    maxdy = dy;
-		  }
-	      }
-	    
-	    glColor3f(0,0,1);
-	    glVertex2f( x, y );
-	    glColor3f(1,0,0);
-	    glVertex2f( x+maxdx, y+maxdy );
-	    
-	  }
-      glEnd();
-#endif
-
       if( lights_need_redraw )
 	{
 	  lights_need_redraw = false;

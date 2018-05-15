@@ -119,8 +119,8 @@ public:
 
   static std::vector<Light> lights;
   
-  b2Body *body, *bumper;
-  b2PrismaticJoint* joint;
+  b2Body *body;//, *bumper;
+  //  b2PrismaticJoint* joint;
   
   Robot( World& world, 
 	 double x, double y, double a,  // pose
@@ -135,12 +135,8 @@ public:
 
   //protected:
   // get sensor data
-  double GetLightIntensity( void );
+  double GetLightIntensity( void ) const;
   double GetLightIntensityAt( double x, double y ) const;
-  bool GetBumperPressed( void );
-
-  void GetNeighbors( double pixels[8] );
-  double* GetTargets( void );
 
   // send commands
   void SetSpeed( double x, double y, double a );
